@@ -1,18 +1,24 @@
-export const getAllEmployees = async (req, res, next) => {
-  try {
-    // Simulate fetching employees from a database
-    const employees = [
-      { id: 1, name: "John Doe", position: "Software Engineer" },
-      { id: 2, name: "Jane Smith", position: "Project Manager" },
-    ];
+import Employee from '../../../../DB/model/Employee.js';
 
-    res.status(200).json({
-      status: "success",
-      data: {
-        employees,
-      },
-    });
+export const createEmployee = async (req, res) => {
+  try {
+    const employee = new Employee(req.body);
+    await employee.save();
+    res.status(201).json(employee);
   } catch (error) {
-    next(error);
+    res.status(400).json({ message: error.message });
   }
 };
+
+export const getAllEmployees =async(req,res)=>{
+  try {
+    const employees = await Employee.find();
+    res.status(201).json(employees);
+    
+  } catch (error) {
+        res.status(500).json({ message: error.message });
+
+  }
+
+}
+
