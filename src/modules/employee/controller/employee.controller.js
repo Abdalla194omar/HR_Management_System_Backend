@@ -40,3 +40,24 @@ export const getEmployeeByid =async(req,res)=>{
   }
 
 };
+
+
+
+// search by name 
+export const SearchEmployee =async(req,res)=>{
+  try {
+    const {name} = req.query;
+    if (!name) {
+      return res.status(404).json({message:"Error employee Name not found"});
+    }
+
+    const employees = await Employee.find({
+      firstName: { $regex: name, $options: 'i' } 
+    });
+        res.status(201).json(employees);
+    
+  } catch (error) {
+        res.status(500).json({ message: error.message });
+  }
+
+};
