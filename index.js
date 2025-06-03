@@ -1,7 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
 import initializeApp from "./src/bootstrap.js";
-import employeeRoutes from './src/modules/employee/employee.router.js'
 
 dotenv.config({ path: "./config/.env" });
 
