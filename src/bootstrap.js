@@ -1,14 +1,18 @@
 import connection from "../DB/connection.js";
 import cors from "cors";
 import path from "path";
-import { globalError } from "./middleWare/globalError.js";
+// import { globalError } from "./middleWare/globalError";
+
+import {router as attendanceRoutes} from "./modules/attendance/attendance.router.js";
 
 const initializeApp = (app, express) => {
   app.use(cors());
   app.use(express.json());
   connection();
 
-  app.use(globalError);
+  app.use("/api/attendance", attendanceRoutes);
+
+  // app.use(globalError);
   app.use("/{*any}", (req, res, next) => {
     res.status(404).json({
       success: false,

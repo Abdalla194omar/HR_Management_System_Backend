@@ -15,14 +15,14 @@ export const globalError = (error, req, res, next) => {
     });
   }
 
-  if (err.isOperational) {
+  if (error.isOperational) {
     return res.status(statusCode).json({
-      status: err.status,
-      message: err.message,
+      status: error.status,
+      message: error.message,
     });
   }
 
-  console.error("UNEXPECTED ERROR :", err);
+  console.error("UNEXPECTED ERROR :", error);
   return res.status(500).json({
     status: "error",
     message: "Something went wrong!",
