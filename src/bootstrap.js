@@ -9,12 +9,7 @@ const initializeApp = (app, express) => {
   connection();
 
   app.use(globalError);
-  app.use("/{*any}", (req, res, next) => {
-    res.status(404).json({
-      success: false,
-      message: `Can't find this route: ${req.originalUrl}`,
-    });
-  });
+  
 };
 
 export default initializeApp;
