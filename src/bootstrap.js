@@ -2,6 +2,8 @@ import connection from "../DB/connection.js";
 import cors from "cors";
 import path from "path";
 import { globalError } from "./middleWare/globalError.js";
+import employeeRoutes from './modules/employee/employee.router.js'
+
 
 const initializeApp = (app, express) => {
   app.use(cors());
@@ -9,6 +11,7 @@ const initializeApp = (app, express) => {
   connection();
 
   app.use(globalError);
+
   app.use('/api/employees', employeeRoutes);
 
 
