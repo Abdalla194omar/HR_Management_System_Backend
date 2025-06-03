@@ -1,5 +1,7 @@
 import Employee from '../../../../DB/model/Employee.js';
 
+
+// create employee
 export const createEmployee = async (req, res) => {
   try {
     const employee = new Employee(req.body);
@@ -10,6 +12,7 @@ export const createEmployee = async (req, res) => {
   }
 };
 
+// get all employee
 export const getAllEmployees =async(req,res)=>{
   try {
     const employees = await Employee.find();
@@ -20,5 +23,4 @@ export const getAllEmployees =async(req,res)=>{
 
   }
 
-}
-
+};
