@@ -43,23 +43,21 @@ export const getEmployeeByid =asyncHandler(
   });
 
 // search by name 
-export const SearchEmployee = async(req,res)=>{
-  try {
+export const SearchEmployee = asyncHandler(async(req,res,next)=>{
+  
     const {name} = req.query;
     if (!name) {
-      return res.status(404).json({message:"Error employee Name not found"});
+      return next(new AppError("Error employee Name not found",400));
+  
     }
 
     const employees = await Employee.find({
       firstName: { $regex: name, $options: 'i' } 
     });
         res.status(201).json(employees);
-    
-  } catch (error) {
-        res.status(500).json({ message: error.message });
-  }
 
-};
+
+});
 
 // update 
 
