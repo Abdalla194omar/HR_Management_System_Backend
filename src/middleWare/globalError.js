@@ -15,10 +15,10 @@ export const globalError = (error, req, res, next) => {
     });
   }
 
-  if (err.isOperational) {
+  if (error.isOperational) {
     return res.status(statusCode).json({
-      status: err.status,
-      message: err.message,
+      status: error.status,
+      message: error.message,
     });
   }
 
