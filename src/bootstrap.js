@@ -2,6 +2,8 @@ import connection from "../DB/connection.js";
 import cors from "cors";
 import path from "path";
 import { globalError } from "./middleWare/globalError.js";
+import departmentRoutes from "./modules/department/department.router.js";
+
 
 const initializeApp = (app, express) => {
   app.use(cors());
@@ -9,6 +11,11 @@ const initializeApp = (app, express) => {
   connection();
 
   app.use(globalError);
+
+
+ app.use('/api/departments', departmentRoutes);
+
+
   app.use("/{*any}", (req, res, next) => {
     res.status(404).json({
       success: false,
