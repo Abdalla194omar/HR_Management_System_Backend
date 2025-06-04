@@ -1,19 +1,28 @@
 import Employee from '../../../../DB/model/Employee.js';
 
+import asyncHandler from 'express-async-handler';
+import AppError from '../../../utils/AppError.js';
+import { employeeValidationSchema } from '../employee.validation.js' ;
+
+
 
 // create employee
-export const createEmployee = async (req, res) => {
-  try {
+export const createEmployee = asyncHandler(async (req, res,next) => {
+    const {error} = employeeValidationSchema.validate(req.body);
+    if (error){
+      return next(new AppError(400,"validation error "))
+    }
+ 
     const employee = new Employee(req.body);
     await employee.save();
-    res.status(201).json(employee);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-};
+    res.status(201).json(employee); 
+}
+);
+
+
 
 // get all employee
-export const getAllEmployees =async(req,res)=>{
+export const getAllEmployees = async(req,res)=>{
   try {
     const employees = await Employee.find();
     res.status(201).json(employees);
@@ -26,7 +35,8 @@ export const getAllEmployees =async(req,res)=>{
 };
 
 // get employee by id 
-export const getEmployeeByid =async(req,res)=>{
+export const getEmployeeByid =
+  async(req,res)=>{
   try {
     const employee = await Employee.findById(req.params.id);
     if (!employee) {
@@ -43,8 +53,9 @@ export const getEmployeeByid =async(req,res)=>{
 
 
 
+
 // search by name 
-export const SearchEmployee =async(req,res)=>{
+export const SearchEmployee = async(req,res)=>{
   try {
     const {name} = req.query;
     if (!name) {
@@ -61,7 +72,6 @@ export const SearchEmployee =async(req,res)=>{
   }
 
 };
-
 
 // update 
 
@@ -86,17 +96,19 @@ export const updateEmployee =async(req,res)=>{
 // delete 
 export const deleteEmployee =async(req,res)=>{
   try {
-    const employee = await Employee.findByIdAndDelete(req.params.id);
+     const employee = await Employee.findByIdAndDelete(req.params.id);
 
       if (!employee)
     {
             return res.status(404).json({message:"Error employee not found"});
  
     }
-        res.status(201).json({message:"Employee Delete Successfully :)"});
+     res.status(201).json({message:"Employee Delete Successfully"});
     
   } catch (error) {
-        res.status(500).json({ message: error.message });
+     res.status(500).json({ message: error.message});
+    
+  }
 }
 
-};
+
