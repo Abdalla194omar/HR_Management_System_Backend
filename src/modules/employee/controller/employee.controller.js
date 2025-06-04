@@ -10,7 +10,7 @@ import { employeeValidationSchema } from '../employee.validation.js' ;
 export const createEmployee = asyncHandler(async (req, res,next) => {
     const {error} = employeeValidationSchema.validate(req.body);
     if (error){
-      return next(new AppError(400,"validation error "))
+      return next(new AppError("validation error ",400))
     }
  
     const employee = new Employee(req.body);
@@ -22,37 +22,25 @@ export const createEmployee = asyncHandler(async (req, res,next) => {
 
 
 // get all employee
-export const getAllEmployees = async(req,res)=>{
-  try {
+export const getAllEmployees =asyncHandler( async(req,res)=>{
+  
     const employees = await Employee.find();
     res.status(201).json(employees);
-    
-  } catch (error) {
-        res.status(500).json({ message: error.message });
-
-  }
-
-};
+});
 
 // get employee by id 
-export const getEmployeeByid =
-  async(req,res)=>{
-  try {
+
+export const getEmployeeByid =asyncHandler(
+  async(req,res,next)=>{
+  
     const employee = await Employee.findById(req.params.id);
     if (!employee) {
-      return res.status(404).json({message:"Error employee not found"});
+      return next(new AppError("Error employee not found",404));
     }
     res.status(201).json(employee);
-    
-  } catch (error) {
-        res.status(500).json({ message: error.message });
+  
 
-  }
-
-};
-
-
-
+  });
 
 // search by name 
 export const SearchEmployee = async(req,res)=>{
@@ -110,5 +98,3 @@ export const deleteEmployee =async(req,res)=>{
     
   }
 }
-
-
