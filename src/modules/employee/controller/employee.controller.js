@@ -61,38 +61,29 @@ export const SearchEmployee = asyncHandler(async(req,res,next)=>{
 
 // update 
 
-export const updateEmployee =async(req,res)=>{
-  try {
+export const updateEmployee = asyncHandler(async(req,res,next)=>{
+
+ const {error} = employeeValidationSchema.validate(req.body);
+    if (error) return next(new AppError("validation error ",400))
+  
+ 
   
     const employee = await Employee.findByIdAndUpdate(req.params.id, req.body,{ new: true, runValidators: true }  ) ;
-    if (!employee)
-    {
-            return res.status(404).json({message:"Error employee not found"});
- 
-    }
-     res.status(201).json(employee);
+    if (!employee) return next(new AppError("Error employee not found",400));
     
-  } catch (error) {
-        res.status(500).json({ message: error.message });
-  }
-};
+     res.status(201).json(employee);
+  
+});
 
 
 
 // delete 
-export const deleteEmployee =async(req,res)=>{
-  try {
+export const deleteEmployee =asyncHandler(async(req,res)=>{
+  
      const employee = await Employee.findByIdAndDelete(req.params.id);
 
-      if (!employee)
-    {
-            return res.status(404).json({message:"Error employee not found"});
- 
-    }
-     res.status(201).json({message:"Employee Delete Successfully"});
+      if (!employee) return next(new AppError("Error employee not found",400));
+     res.status(201).json({message:"Employee Deleted Successfully"});
     
-  } catch (error) {
-     res.status(500).json({ message: error.message});
-    
-  }
-}
+
+});
