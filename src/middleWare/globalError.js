@@ -2,6 +2,7 @@ export const globalError = (error, req, res, next) => {
   const statusCode = error.statusCode || 500;
 
   if (req.validationresult?.details) {
+    console.log("req.validationresult?.details");
     return res.status(statusCode).json({
       message: error.message,
       details: req.validationresult.details,
@@ -9,6 +10,7 @@ export const globalError = (error, req, res, next) => {
   }
 
   if (process.env.NODE_ENV === "development") {
+    console.log("process.env.NODE_ENV === 'development'");
     return res.status(statusCode).json({
       message: error.message,
       stack: error.stack,
@@ -16,6 +18,7 @@ export const globalError = (error, req, res, next) => {
   }
 
   if (error.isOperational) {
+    console.log("operational");
     return res.status(statusCode).json({
       status: error.status,
       message: error.message,
