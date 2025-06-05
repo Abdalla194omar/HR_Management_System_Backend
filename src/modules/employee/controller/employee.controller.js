@@ -7,15 +7,12 @@ import { employeeValidationSchema } from '../employee.validation.js' ;
 
 
 // create employee
-export const createEmployee = asyncHandler(async (req, res,next) => {
-    const {error} = employeeValidationSchema.validate(req.body);
-    if (error) return next(new AppError("validation error ",400))
+export const createEmployee = asyncHandler(async (req, res) => {
     const employee = new Employee(req.body);
     await employee.save();
     res.status(201).json(employee); 
 }
 );
-
 
 
 // get all employee
@@ -53,11 +50,6 @@ export const SearchEmployee = asyncHandler(async(req,res,next)=>{
 // update 
 
 export const updateEmployee = asyncHandler(async(req,res,next)=>{
-
- const {error} = employeeValidationSchema.validate(req.body);
-    if (error) return next(new AppError("validation error ",400))
-  
- 
   
     const employee = await Employee.findByIdAndUpdate(req.params.id, req.body,{ new: true, runValidators: true }  ) ;
     if (!employee) return next(new AppError("Error employee not found",400));
