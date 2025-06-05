@@ -2,7 +2,6 @@ import Employee from '../../../../DB/model/Employee.js';
 
 import asyncHandler from 'express-async-handler';
 import AppError from '../../../utils/AppError.js';
-import { employeeValidationSchema } from '../employee.validation.js' ;
 
 
 
