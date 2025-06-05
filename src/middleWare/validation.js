@@ -1,8 +1,9 @@
+import AppError from "../utils/AppError.js";
+
 const validation = (schema) => {
   return (req, res, next) => {
     try {
       let validationErrors = [];
-
       // Validate request body if schema has body validation
       if (schema.body) {
         const bodyValidation = schema.body.validate(req.body, {
@@ -55,15 +56,13 @@ const validation = (schema) => {
       // If any validation errors occurred
       if (validationErrors.length > 0) {
         req.validationErrors = validationErrors;
-        return next(new Error("Validation error", { cause: 400 }));
+        return next(new AppError("Validation error", 400));
       }
 
       return next();
     } catch (error) {
       return next(
-        new Error(`Validation middleware error: ${error.message}`, {
-          cause: 500,
-        })
+        new AppError(`Validation middleware error: ${error.message}`, 500)
       );
     }
   };
