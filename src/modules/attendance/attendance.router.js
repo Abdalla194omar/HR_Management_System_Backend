@@ -6,5 +6,5 @@ import { createAttendanceSchema } from "./attendance.validation.js";
 export const router = express.Router();
 
 // adding validation schema in route
-// router.post("/", createAttendance);
-router.post("/", validation({body: createAttendanceSchema}), createAttendance);
+router.post("/", createAttendance);
+// router.post("/", validation({body: createAttendanceSchema}), createAttendance);
