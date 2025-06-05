@@ -135,6 +135,20 @@ const EmployeeSchema = new Schema(
       min: [0, "Deduction value must be positive"],
       default: 0,
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+      validate: {
+        validator: function (value) {
+          return value === null || value <= new Date();
+        },
+        message: "Deleted date must be in the past or null",
+      },
+    },
   },
   { timestamps: true }
 );

@@ -50,6 +50,20 @@ const AttendanceSchema = new Schema(
       },
       default: "Present",
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+      validate: {
+        validator: function (value) {
+          return value === null || value <= new Date();
+        },
+        message: "Deleted date must be in the past or null",
+      },
+    },
   },
   { timestamps: true }
 );
