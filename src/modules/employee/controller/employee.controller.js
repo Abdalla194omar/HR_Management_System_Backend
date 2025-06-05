@@ -18,7 +18,7 @@ export const createEmployee = asyncHandler(async (req, res) => {
 // get all employee
 export const getAllEmployees =asyncHandler( async(req,res)=>{
   
-    const employees = await Employee.find();
+    const employees = await Employee.find({ isDeleted: false });
     res.status(201).json(employees);
 });
 
@@ -27,7 +27,7 @@ export const getAllEmployees =asyncHandler( async(req,res)=>{
 export const getEmployeeByid =asyncHandler(
   async(req,res,next)=>{
   
-    const employee = await Employee.findById(req.params.id);
+    const employee = await Employee.findById({_id: req.params.id, isDeleted: false} );
     if (!employee) return next(new AppError("Error employee not found",404));
     
     res.status(201).json(employee);
@@ -40,7 +40,8 @@ export const SearchEmployee = asyncHandler(async(req,res,next)=>{
     if (!name) return next(new AppError("Error employee Name not found",400));
   
     const employees = await Employee.find({
-      firstName: { $regex: name, $options: 'i' } 
+      firstName: { $regex: name, $options: 'i' },
+        isDeleted: false
     });
         res.status(201).json(employees);
 
@@ -63,7 +64,8 @@ export const updateEmployee = asyncHandler(async(req,res,next)=>{
 // delete 
 export const deleteEmployee =asyncHandler(async(req,res,next)=>{
   
-     const employee = await Employee.findByIdAndDelete(req.params.id);
+     const employee = await Employee.findByIdAndUpdate(req.params.id,{ isDeleted: true },
+  { new: true });
 
       if (!employee) return next(new AppError("Error employee not found",400));
      res.status(201).json({message:"Employee Deleted Successfully"});
