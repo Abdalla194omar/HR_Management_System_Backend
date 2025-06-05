@@ -68,4 +68,9 @@ const AttendanceSchema = new Schema(
   { timestamps: true }
 );
 
+AttendanceSchema.pre(/^find/, function (next) {
+  this.where({ isDeleted: false });
+  next();
+});
+
 export default mongoose.model("Attendance", AttendanceSchema);
