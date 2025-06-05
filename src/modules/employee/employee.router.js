@@ -1,7 +1,6 @@
 import express from "express";
 import { createEmployee ,getAllEmployees,getEmployeeByid,SearchEmployee,updateEmployee,deleteEmployee} from "./controller/employee.controller.js";
-import {employeeValidationSchema} from './employee.validation.js'
-import validation from "../../middleWare/validation.js";
+
 
 const router = express.Router();
 
