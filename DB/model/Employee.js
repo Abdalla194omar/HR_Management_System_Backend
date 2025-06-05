@@ -30,7 +30,7 @@ const EmployeeSchema = new Schema(
       match: [/^\+?\d{10,15}$/, "Phone number must be valid"],
     },
     department: {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: "Department",
       required: [true, "Department is required"],
     },
@@ -154,3 +154,4 @@ const EmployeeSchema = new Schema(
 );
 
 export default model("Employee", EmployeeSchema);
+
