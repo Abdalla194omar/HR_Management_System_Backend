@@ -6,7 +6,7 @@ import validation from "../../middleWare/validation.js";
 const router = express.Router();
 
 // create employee
-router.post("/",validation(employeeValidationSchema),createEmployee); // POST /api/employees/
+router.post("/",createEmployee); // POST /api/employees/
 
 // get all 
 router.get("/", getAllEmployees);
@@ -20,7 +20,7 @@ router.get("/search", SearchEmployee);
 router.get("/:id", getEmployeeByid);
 
 // update 
-router.put('/:id',validation(employeeValidationSchema), updateEmployee);
+router.put('/:id', updateEmployee);
 
 
 // delete 
