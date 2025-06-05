@@ -135,6 +135,11 @@ const EmployeeSchema = new Schema(
       min: [0, "Deduction value must be positive"],
       default: 0,
     },
+     isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+
   },
   { timestamps: true }
 );
