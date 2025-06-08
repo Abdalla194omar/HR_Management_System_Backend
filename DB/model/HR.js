@@ -6,7 +6,7 @@ const HRSchema = new Schema(
     email: {
       type: String,
       required: [true, "Email is required"],
-      unique: true,
+      unique: [true, "Email must be unique"],
       lowercase: true,
       trim: true,
       match: [/\S+@\S+\.\S+/, "Email format is invalid"],

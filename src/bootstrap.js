@@ -12,6 +12,7 @@ import holidayRoutes from "./modules/holiday/holiday.router.js";
 const initializeApp = (app, express) => {
   app.use(cors());
   app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
   connection();
 
   app.use("/api/attendance", attendanceRoutes);
