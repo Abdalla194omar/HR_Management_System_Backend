@@ -8,7 +8,7 @@ import {
   deleteEmployee,
 } from "./controller/employee.controller.js";
 import validation from "../../middleWare/validation.js";
-import {createEmployeeSchema} from './employee.validation.js'
+import {createEmployeeSchema,updateEmployeeSchema} from './employee.validation.js'
 
 const router = express.Router();
 
@@ -25,7 +25,7 @@ router.get("/search", SearchEmployee);
 router.get("/:id", getEmployeeByid);
 
 // update
-router.put("/:id", updateEmployee);
+router.put("/:id",validation(updateEmployeeSchema), updateEmployee);
 
 // delete
 router.delete("/:id", deleteEmployee);
