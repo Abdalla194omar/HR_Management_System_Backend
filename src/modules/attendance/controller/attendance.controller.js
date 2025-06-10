@@ -4,11 +4,91 @@ import asyncHandler from "../../../utils/asyncHandeler.js";
 import Employee from "../../../../DB/model/Employee.js";
 import * as calc from "../../../utils/AttendanceCalc.js";
 
-// GET AND FILTER ATTENDANCE
+// GET AND FILTER ATTENDANCE (filtering with |name, from, to| or |dept, from, to|)
 export const getAttendance = asyncHandler(async (req, res, next) => {
-  const { name, department, from, to } = req.query;
-  console.log(req.query);
-  return res.json({ message: "getAttendance", data: req.query });
+  const { name, department, from, to, page = 1, limit = 10 } = req.query;
+  const query = [];
+  let attendances = [];
+
+  const pageNum = parseInt(page, 10);
+  const limitNum = parseInt(limit, 10);
+  const skip = (pageNum - 1) * limitNum;
+
+  const sendResponse = (message, totalDocs, data) => {
+    const totalPages = Math.ceil(totalDocs / limitNum);
+    return res.status(200).json({ message, pagination: { totalDocs, totalPages, page: pageNum, limit: limitNum }, data, queryParams: req.query });
+  };
+
+  if (Object.keys(req.query).length > 0) {
+    if ((from || to) && !name && !department) return next(new AppError("You must provide either name or department when filtering", 400));
+
+    if (!from || !to) return next(new AppError("You must provide dates for filtering"));
+    const dateFilter = {};
+    if (from) dateFilter.$gte = new Date(from);
+    if (to) dateFilter.$lte = new Date(to);
+    const matchConditions = [];
+    matchConditions.push({ date: dateFilter });
+
+    query.push(
+      { $match: { isDeleted: false } },
+      {
+        $lookup: {
+          from: "employees",
+          localField: "employee",
+          foreignField: "_id",
+          as: "employeeData",
+        },
+      },
+      { $unwind: { path: "$employeeData", preserveNullAndEmptyArrays: true } }
+    );
+
+    if (name) {
+      matchConditions.push({
+        $expr: {
+          $regexMatch: {
+            input: { $concat: ["$employeeData.firstName", " ", "$employeeData.lastName"] },
+            regex: new RegExp(name, "i"),
+          },
+        },
+      });
+    }
+    if (department) {
+      query.push(
+        {
+          $lookup: {
+            from: "departments",
+            localField: "employeeData.department",
+            foreignField: "_id",
+            as: "departmentData",
+          },
+        },
+        { $unwind: { path: "$departmentData", preserveNullAndEmptyArrays: true } }
+      );
+      matchConditions.push({
+        "departmentData.departmentName": { $regex: new RegExp(department, "i") },
+      });
+    }
+
+    query.push({
+      $match: {
+        $and: matchConditions,
+      },
+    });
+
+    const countQuery = [...query];
+    countQuery.push({ $count: "total" });
+    const totalResult = await Attendance.aggregate(countQuery);
+    const totalDocs = totalResult[0]?.total || 0;
+
+    query.push({ $skip: skip }, { $limit: limitNum });
+
+    attendances = await Attendance.aggregate(query);
+    return sendResponse("Filtering attendances successfully", totalDocs, attendances);
+  } else {
+    const totalDocs = await Attendance.countDocuments({ isDeleted: false });
+    attendances = await Attendance.find().skip(skip).limit(limitNum).populate("employee");
+    return sendResponse("Getting all attendances successfully", totalDocs, attendances);
+  }
 });
 
 // CREATE CHECKIN
@@ -28,7 +108,7 @@ export const createCheckIn = asyncHandler(async (req, res, next) => {
     });
   }
   const newCheckIn = await Attendance.create(checkInData);
-  return res.status(201).json({
+  return res.status(200).json({
     message: "CheckIn added successfully",
     data: newCheckIn,
   });
