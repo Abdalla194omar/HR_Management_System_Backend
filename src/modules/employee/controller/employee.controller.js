@@ -1,6 +1,6 @@
 import Employee from "../../../../DB/model/Employee.js";
 
-import asyncHandler from "express-async-handler";
+import asyncHandler from "../../../utils/asyncHandeler.js";
 
 import AppError from "../../../utils/AppError.js";
 
