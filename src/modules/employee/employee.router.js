@@ -7,11 +7,13 @@ import {
   updateEmployee,
   deleteEmployee,
 } from "./controller/employee.controller.js";
+import validation from "../../middleWare/validation.js";
+import {createEmployeeSchema} from './employee.validation.js'
 
 const router = express.Router();
 
 // create employee
-router.post("/", createEmployee); // POST /api/employees/
+router.post("/",validation(createEmployeeSchema),createEmployee); // POST /api/employees/
 
 // get all
 router.get("/", getAllEmployees);
