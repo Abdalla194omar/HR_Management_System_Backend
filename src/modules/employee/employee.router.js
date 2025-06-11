@@ -6,9 +6,10 @@ import {
   SearchEmployee,
   updateEmployee,
   deleteEmployee,
+  getEmployeesFilter
 } from "./controller/employee.controller.js";
 import validation from "../../middleWare/validation.js";
-import {createEmployeeSchema,updateEmployeeSchema} from './employee.validation.js'
+import {createEmployeeSchema,updateEmployeeSchema,getEmployeesFilterSchema} from './employee.validation.js'
 
 const router = express.Router();
 
@@ -16,7 +17,11 @@ const router = express.Router();
 router.post("/",validation(createEmployeeSchema),createEmployee); // POST /api/employees/
 
 // get all
-router.get("/", getAllEmployees);
+router.get("/all", getAllEmployees);
+
+// get all by filter 
+router.get("/", validation(getEmployeesFilterSchema),getEmployeesFilter);
+
 
 //search
 router.get("/search", SearchEmployee);
