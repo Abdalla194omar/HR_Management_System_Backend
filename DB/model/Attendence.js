@@ -14,8 +14,12 @@ const AttendanceSchema = new Schema(
     },
     checkInTime: {
       type: String,
+      required: function () {
+        return this.status === "Present";
+      },
       validate: {
         validator: function (v) {
+          if (this.status !== "Present") return true;
           return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v); // HH:mm format
         },
         message: "Check-in time must be in HH:mm format",
@@ -25,6 +29,7 @@ const AttendanceSchema = new Schema(
       type: String,
       validate: {
         validator: function (v) {
+          if (this.status !== "Present") return true;
           return /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(v); // HH:mm format
         },
         message: "Check-out time must be in HH:mm format",
@@ -45,8 +50,8 @@ const AttendanceSchema = new Schema(
     status: {
       type: String,
       enum: {
-        values: ["Present", "Absent", "On Leave"],
-        message: "Status must be Present, Absent, or On Leave",
+        values: ["Present", "Absent"],
+        message: "Status must be Present or Absent",
       },
       default: "Present",
     },

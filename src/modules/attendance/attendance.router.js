@@ -1,12 +1,20 @@
 import express from "express";
-import { getAttendance, createAttendance, updateAttendance, deleteAttendance } from "./controller/attendance.controller.js";
+import * as controllers from "./controller/attendance.controller.js";
 import validation from "../../middleWare/validation.js";
-import { getAttendanceSchema, createAttendanceSchema, updateAttendanceSchema, deleteAttendanceSchema } from "./attendance.validation.js";
+import * as schemas from "./attendance.validation.js";
 
 export const router = express.Router();
 
-// adding validation schema in route
-router.get("/", getAttendance);
-router.post("/", validation(createAttendanceSchema), createAttendance);
-router.patch("/:id", validation(updateAttendanceSchema), updateAttendance);
-router.delete("/:id", validation(deleteAttendanceSchema), deleteAttendance);
+router.get("/", validation(schemas.getAttendanceSchema), controllers.getAttendance);
+
+// router.get("/", validation(schemas.getAttendanceSchema), getAttendanceV2);
+
+router.post("/", validation(schemas.createAttendanceSchema), controllers.createAttendance);
+
+router.post("/checkin", validation(schemas.createCheckIneSchema), controllers.createCheckIn);
+
+router.patch("/checkout/:id", validation(schemas.createCheckOutSchema), controllers.createCheckOut);
+
+router.patch("/:id", validation(schemas.updateAttendanceSchema), controllers.updateAttendance);
+
+router.delete("/:id", validation(schemas.deleteAttendanceSchema), controllers.deleteAttendance);
