@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
+
 const { Schema } = mongoose;
 
 const HRSchema = new Schema(
@@ -6,15 +8,19 @@ const HRSchema = new Schema(
     email: {
       type: String,
       required: [true, "Email is required"],
-      unique: true,
+      unique: [true, "Email must be unique"],
       lowercase: true,
       trim: true,
       match: [/\S+@\S+\.\S+/, "Email format is invalid"],
     },
-    passwordHash: {
+    password: {
       type: String,
-      required: [true, "Password hash is required"],
-      minlength: [60, "Password hash must be a valid hashed string"],
+      required: [true, "Password is required"],
+      minlength: [8, "Password must be at least 8 characters"],
+      match: [
+        /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/,
+        "Password must contain letters, numbers, and be at least 8 characters",
+      ],
     },
     name: {
       type: String,
@@ -40,5 +46,13 @@ const HRSchema = new Schema(
   },
   { timestamps: true }
 );
+
+HRSchema.pre("save", async function (next) {
+  if (this.isModified("password")) {
+    this.password = await bcrypt.hash(this.password, 12);
+    console.log("Hashed password:", this.password); // Debugging
+  }
+  next();
+});
 
 export default mongoose.model("HR", HRSchema);
