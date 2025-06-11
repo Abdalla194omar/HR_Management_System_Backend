@@ -5,6 +5,7 @@ const HolidaySchema = new Schema(
   {
     name: {
       type: String,
+      required: [true, "Holiday name is required"],
     },
     date: {
       type: Date,

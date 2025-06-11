@@ -1,11 +1,17 @@
 import express from "express";
-
-import { createHoliday } from "./controller/holiday.controller.js";
-import validation from "../../middleWare/validation.js";
-import { createHolidaySchema } from "./holiday.validation.js";
+import validateHoliday from "./holiday.validation.js";
+import {
+  createHoliday,
+  getHolidays,
+  updateHoliday,
+  deleteHoliday,
+} from "./controller/holiday.controller.js";
 
 const router = express.Router();
 
-router.post("/", validation(createHolidaySchema), createHoliday);
+router.post("/", validateHoliday, createHoliday);
+router.get("/", getHolidays);
+router.put("/:id", validateHoliday, updateHoliday);
+router.delete("/:id", deleteHoliday);
 
 export default router;

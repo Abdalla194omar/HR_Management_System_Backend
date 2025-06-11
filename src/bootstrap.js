@@ -8,6 +8,7 @@ import holidayRoutes from "./modules/holiday/holiday.router.js";
 import payrollRoutes from "./modules/payroll/payroll.router.js";
 
 import { router as attendanceRoutes } from "./modules/attendance/attendance.router.js";
+import authRoutes from "./modules/auth/hr.router.js";
 
 const initializeApp = (app, express) => {
   app.use(cors());
@@ -18,6 +19,8 @@ const initializeApp = (app, express) => {
   app.use("/api/attendance", attendanceRoutes);
   app.use("/api/departments", departmentRoutes);
   app.use("/api/employees", employeeRoutes);
+  app.use("/api/auth", authRoutes);
+
   app.use("/api/holidays", holidayRoutes);
   app.use("/api/payrolls", payrollRoutes);
   app.use(globalError);
