@@ -1,6 +1,6 @@
 import Employee from "../../../../DB/model/Employee.js";
 
-import asyncHandler from "express-async-handler";
+import asyncHandler from "../../../utils/asyncHandeler.js";
 
 import AppError from "../../../utils/AppError.js";
 
@@ -9,12 +9,28 @@ export const createEmployee = asyncHandler(async (req, res) => {
   const employee = new Employee(req.body);
   await employee.save();
   res.status(201).json(employee);
+  
 });
 
 // get all employee
 export const getAllEmployees = asyncHandler(async (req, res) => {
   const employees = await Employee.find({ isDeleted: false });
-  res.status(201).json(employees);
+  res.status(200).json({ message: "Get All employees successfully", employees });
+});
+
+// get all employees with filters
+export const getEmployeesFilter = asyncHandler(async (req, res, next) => {
+  const { departmentId, hireDate } = req.query;
+  const query = { isDeleted: false };
+
+  if (departmentId) query.department = departmentId;
+  if (hireDate) query.hireDate =  { $gte: new Date(`${hireDate}-01`), $lte: new Date(`${hireDate}-31`) }; 
+
+  const employees = await Employee.find(query); 
+  if (employees.length === 0) {
+    return next(new AppError("No employees found matching the filters", 404));
+  }
+  res.status(200).json({ message: "Employees with filters successfully", employees });
 });
 
 // get employee by id
@@ -40,6 +56,7 @@ export const SearchEmployee = asyncHandler(async (req, res, next) => {
   });
   res.status(201).json(employees);
 });
+
 
 // update
 

@@ -6,15 +6,22 @@ import {
   SearchEmployee,
   updateEmployee,
   deleteEmployee,
+  getEmployeesFilter
 } from "./controller/employee.controller.js";
+import validation from "../../middleWare/validation.js";
+import {createEmployeeSchema,updateEmployeeSchema,getEmployeesFilterSchema} from './employee.validation.js'
 
 const router = express.Router();
 
 // create employee
-router.post("/", createEmployee); // POST /api/employees/
+router.post("/",validation(createEmployeeSchema),createEmployee); // POST /api/employees/
 
 // get all
-router.get("/", getAllEmployees);
+router.get("/all", getAllEmployees);
+
+// get all by filter 
+router.get("/", validation(getEmployeesFilterSchema),getEmployeesFilter);
+
 
 //search
 router.get("/search", SearchEmployee);
@@ -23,7 +30,7 @@ router.get("/search", SearchEmployee);
 router.get("/:id", getEmployeeByid);
 
 // update
-router.put("/:id", updateEmployee);
+router.put("/:id",validation(updateEmployeeSchema), updateEmployee);
 
 // delete
 router.delete("/:id", deleteEmployee);
