@@ -144,7 +144,7 @@ export const updateEmployeeSchema = {
     nationalId: Joi.string().pattern(/^\d{14}$/).messages({
         "string.pattern.base": "National ID must be 14 digits",
         "string.empty": "National ID is required",
-      
+    
       }),
     weekendDays: Joi.array().items(
       Joi.string().valid("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
@@ -156,3 +156,23 @@ export const updateEmployeeSchema = {
   })
 }
 
+
+
+export const getEmployeesFilterSchema = {
+  query: Joi.object({
+    departmentId: Joi.string()
+      .length(24)
+      .hex()
+      .messages({
+        "string.length": "Department ID must be 24 characters",
+        "string.hex": "Department ID must be a valid hexadecimal string",
+      }),
+
+    hireDate: Joi.string()
+      .pattern(/^(\d{4})-(\d{2})$/)
+      .messages({
+        "string.pattern.base": "Hire date must be in YYYY-MM format (e.g., 2025-06)",
+      }),
+})
+
+    }
