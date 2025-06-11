@@ -20,7 +20,7 @@ const EmployeeSchema = new Schema(
     email: {
       type: String,
       required: [true, "Email is required"],
-      unique: true,
+      unique: [true,"Email is unique"],
       lowercase: true,
       trim: true,
       match: [/\S+@\S+\.\S+/, "Email must be a valid format"],
@@ -92,7 +92,7 @@ const EmployeeSchema = new Schema(
     },
     nationalId: {
       type: String,
-      unique: true,
+      unique: [true,"nationalId is unique"],
       sparse: true,
       match: [/^\d{14}$/, "National ID must be 14 digits"],
     },
