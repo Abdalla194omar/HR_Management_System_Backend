@@ -1,10 +1,12 @@
 import express from "express";
-import { createAttendance } from "./controller/attendance.controller.js";
+import { getAttendance, createAttendance, updateAttendance, deleteAttendance } from "./controller/attendance.controller.js";
 import validation from "../../middleWare/validation.js";
-import { createAttendanceSchema } from "./attendance.validation.js";
+import { getAttendanceSchema, createAttendanceSchema, updateAttendanceSchema, deleteAttendanceSchema } from "./attendance.validation.js";
 
 export const router = express.Router();
 
 // adding validation schema in route
-router.post("/", createAttendance);
-// router.post("/", validation({body: createAttendanceSchema}), createAttendance);
+router.get("/", getAttendance);
+router.post("/", validation(createAttendanceSchema), createAttendance);
+router.patch("/:id", validation(updateAttendanceSchema), updateAttendance);
+router.delete("/:id", validation(deleteAttendanceSchema), deleteAttendance);

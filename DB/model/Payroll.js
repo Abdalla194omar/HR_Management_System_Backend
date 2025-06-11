@@ -13,9 +13,16 @@ const PayrollSchema = new Schema(
       required: [true, "Month is required"],
       match: [/^(0[1-9]|1[0-2])-\d{4}$/, "Month must be in MM-YYYY format"],
     },
+    year: {
+      type: Number,
+      required: [true, "Year is required"],
+      min: [2000, "Year must be at least 2000"],
+      max: [new Date().getFullYear(), "Year must not exceed the current year"],
+    },
     monthDays: {
       type: Number,
-      min: [0, "Month days must be a non-negative number"],
+      required: [true, "Month days are required"],
+      min: [1, "Month days must be at least 1"],
       max: [31, "Month days must not exceed 31"],
     },
     attendedDays: {
@@ -55,10 +62,6 @@ const PayrollSchema = new Schema(
     netSalary: {
       type: Number,
       min: [0, "Net salary must be at least 0"],
-    },
-    generatedBy: {
-      type: Schema.Types.ObjectId,
-      ref: "HR",
     },
     isDeleted: {
       type: Boolean,
