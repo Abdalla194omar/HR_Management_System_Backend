@@ -1,69 +1,58 @@
 import Department from "../../../../DB/model/Department.js";
+import asyncHandler from "../../../utils/asyncHandeler.js";
+import AppError from "../../../utils/AppError.js";
+
 
 // Create department
-export const createDepartment = async (req, res) => {
-  try {
-    const { departmentName } = req.body;
+export const createDepartment = asyncHandler(async (req, res) => {
+  const { departmentName } = req.body;
 
-    const department = new Department({ departmentName });
-    await department.save();
+  const department = new Department({ departmentName });
+  await department.save();
 
-    res.status(201).json({
-      message: "Department created successfully",
-      department
-    });
-  } catch (error) {
-    res.status(400).json({ message: error.message });
-  }
-};
+  res.status(201).json({
+    message: "Department created successfully",
+    department
+  });
+});
 
 
 // Get all departments
-export const getAllDepartments = async (req, res) => {
-  try {
-    const departments = await Department.find();  
-    res.status(200).json(departments);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+export const getAllDepartments = asyncHandler(async (req, res) => {
+  const departments = await Department.find();
+  res.status(200).json(departments);
+});
+
+
 
 // Update department
-export const updateDepartment = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { departmentName } = req.body;
+export const updateDepartment = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const { departmentName } = req.body;
 
-    const department = await Department.findById(id);
-    if (!department) {
-      return res.status(404).json({ message: "Department not found" });
-    }
-
-    department.departmentName = departmentName || department.departmentName;
-    await department.save();
-
-    res.status(200).json({
-      message: "Department updated successfully",
-      department,
-    });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  const department = await Department.findById(id);
+  if (!department) {
+    return next(new AppError("Department not found", 404));
   }
-};
 
-// Delete department
-export const deleteDepartment = async (req, res) => {
-  try {
-    const { id } = req.params;
+  department.departmentName = departmentName || department.departmentName;
+  await department.save();
 
-    const department = await Department.findByIdAndDelete(id);
-    if (!department) {
-      return res.status(404).json({ message: "Department not found" });
-    }
+  res.status(200).json({
+    message: "Department updated successfully",
+    department,
+  });
+});
 
-    res.status(200).json({ message: "Department deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+
+
+export const deleteDepartment = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+
+  const department = await Department.findByIdAndDelete(id);
+  if (!department) {
+    return next(new AppError("Department not found", 404));
   }
-};
 
+  res.status(200).json({ message: "Department deleted successfully" });
+});
