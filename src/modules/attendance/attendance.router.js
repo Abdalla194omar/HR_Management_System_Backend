@@ -2,7 +2,6 @@ import express from "express";
 import * as controllers from "./controller/attendance.controller.js";
 import validation from "../../middleWare/validation.js";
 import * as schemas from "./attendance.validation.js";
-import { getAttendanceV2 } from "./getAttendance.js";
 
 export const router = express.Router();
 
