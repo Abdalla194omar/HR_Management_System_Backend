@@ -1,8 +1,8 @@
 export const globalError = (error, req, res, next) => {
   const statusCode = error.statusCode || 500;
 
-  if (req.validationErrors) {
-    console.log("req.validationErrors");
+  if (req.validationresult?.details) {
+    console.log("req.validationresult?.details");
     return res.status(statusCode).json({
       message: error.message,
       details: req.validationErrors,
