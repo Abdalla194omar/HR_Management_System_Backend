@@ -9,6 +9,7 @@ export const createEmployee = asyncHandler(async (req, res) => {
   const employee = new Employee(req.body);
   await employee.save();
   res.status(201).json(employee);
+  
 });
 
 // get all employee
