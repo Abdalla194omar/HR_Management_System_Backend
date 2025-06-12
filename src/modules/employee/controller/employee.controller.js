@@ -20,17 +20,27 @@ export const getAllEmployees = asyncHandler(async (req, res) => {
 
 // get all employees with filters
 export const getEmployeesFilter = asyncHandler(async (req, res, next) => {
-  const { departmentId, hireDate } = req.query;
+  const { departmentId, hireDate ,page = 1, limit = 10} = req.query;
   const query = { isDeleted: false };
 
   if (departmentId) query.department = departmentId;
   if (hireDate) query.hireDate =  { $gte: new Date(`${hireDate}-01`), $lte: new Date(`${hireDate}-31`) }; 
 
-  const employees = await Employee.find(query); 
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const employees = await Employee.find(query).skip(skip).limit(parseInt(limit)); 
+  const totalEmployees = await Employee.countDocuments(query);
+  const totalPages = Math.ceil(totalEmployees / limit);
+
   if (employees.length === 0) {
     return next(new AppError("No employees found matching the filters", 404));
   }
-  res.status(200).json({ message: "Employees with filters successfully", employees });
+
+  res.status(200).json({ message: "Employees with filters and pagination successfully",pagination: {
+      totalEmployees,
+      totalPages,
+      page: page,
+      limit: limit,
+    }, employees });
 });
 
 // get employee by id
