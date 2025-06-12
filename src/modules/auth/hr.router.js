@@ -1,11 +1,10 @@
 import express from "express";
-import validateAuth from "./hr.validation.js";
-import { registerHR, loginHR } from "./controller/hr.controller.js";
+import validateHR from "./hr.validation.js";
+import { loginHR } from "./controller/hr.controller.js";
+import { loginSchema } from "./hr.validation.js";
 
 const router = express.Router();
 
-router.post("/register", validateAuth, registerHR);
-router.post("/login", validateAuth, loginHR);
+router.post("/login", validateHR(loginSchema), loginHR);
 
 export default router;
-

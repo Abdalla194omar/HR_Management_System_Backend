@@ -1,6 +1,9 @@
+import mongoose from "mongoose";
 import Attendence from "../../../../DB/model/Attendence.js";
 import Employee from "../../../../DB/model/Employee.js";
 import Holiday from "../../../../DB/model/Holiday.js";
+import Payroll from "../../../../DB/model/Payroll.js";
+import AppError from "../../../utils/AppError.js";
 import asyncHandler from "../../../utils/asyncHandeler.js";
 
 function dayNameToNumber(dayName) {
@@ -77,7 +80,7 @@ function calcMonthDays(month, year) {
   if (thirtyDays.includes(parseInt(month))) {
     return 30;
   }
-  return parseInt(month) === 2 && isLeap(parseInt(month)) ? 28 : 29;
+  return parseInt(month) === 2 && isLeap(parseInt(month)) ? 29 : 28;
 }
 
 function calcAttendedDays(employeeAttendance) {
@@ -163,27 +166,44 @@ function calcNetSalary(
 export const getAllPayrolls = asyncHandler(async (req, res, next) => {
   const { month, year } = req.query;
 
-  const [employees, holidays, monthAttendence] = await Promise.all([
-    Employee.find(),
-    Holiday.find({
-      $expr: {
-        $and: [
-          { $eq: [{ $month: "$date" }, parseInt(month)] },
-          { $eq: [{ $year: "$date" }, parseInt(year)] },
-        ],
-      },
-    }),
-    Attendence.find({
-      $expr: {
-        $and: [
-          { $eq: [{ $year: "$date" }, parseInt(year)] },
-          { $eq: [{ $month: "$date" }, parseInt(month)] },
-        ],
-      },
-    }).populate("employee"),
-  ]);
+  if (!/^(0[1-9]|1[0-2])$/.test(month) || !/^\d{4}$/.test(year)) {
+    return next(new AppError("Year Or Month Format Is Not Valid", 400));
+  }
+  if (parseInt(year) > new Date().getFullYear()) {
+    return next(new AppError("Year Can't be In The Future", 400));
+  }
 
-  let employeesAttendance = [];
+  const [employeesWithAttendance, holidays, monthAttendence] =
+    await Promise.all([
+      Attendence.distinct("employee", {
+        $expr: {
+          $and: [
+            { $eq: [{ $year: "$date" }, parseInt(year)] },
+            { $eq: [{ $month: "$date" }, parseInt(month)] },
+          ],
+        },
+      }),
+      Holiday.find({
+        $expr: {
+          $and: [
+            { $eq: [{ $month: "$date" }, parseInt(month)] },
+            { $eq: [{ $year: "$date" }, parseInt(year)] },
+          ],
+        },
+      }),
+      Attendence.find({
+        $expr: {
+          $and: [
+            { $eq: [{ $year: "$date" }, parseInt(year)] },
+            { $eq: [{ $month: "$date" }, parseInt(month)] },
+          ],
+        },
+      }).populate("employee"),
+    ]);
+
+  const employees = await Employee.find({
+    _id: { $in: employeesWithAttendance },
+  });
 
   let empPayroll = [];
 
@@ -194,64 +214,111 @@ export const getAllPayrolls = asyncHandler(async (req, res, next) => {
     );
     if (!employeeAttendance || employeeAttendance.length === 0) continue;
 
-    employeesAttendance.push(employeeAttendance);
-  }
+    const existingPayroll = await Payroll.findOne({
+      employee: emp._id,
+      month,
+      year,
+      isDeleted: false,
+    });
 
-  for (const employeeAttendance of employeesAttendance) {
-    const employee = employeeAttendance[0].employee;
-    const { weeklyHolidays, officialHolidaysCount } =
-      calcHolidaysInAttendanceRange(
-        employee,
-        employeeAttendance.map((a) => new Date(a.date)),
-        holidays
+    let payrollData;
+
+    const attendanceUpdated = employeeAttendance.some(
+      (a) => !existingPayroll || a.updatedAt > existingPayroll.updatedAt
+    );
+    const holidaysUpdated = holidays.some(
+      (h) => !existingPayroll || h.updatedAt > existingPayroll.updatedAt
+    );
+
+    if (existingPayroll && !attendanceUpdated && !holidaysUpdated) {
+      payrollData = existingPayroll;
+    } else {
+      const { weeklyHolidays, officialHolidaysCount } =
+        calcHolidaysInAttendanceRange(
+          emp,
+          employeeAttendance.map((a) => new Date(a.date)),
+          holidays
+        );
+
+      const overTimeType = emp.overtimeType;
+      const overTimeValue = emp.overtimeValue;
+      const deductionType = emp.deductionType;
+      const deductionValue = emp.deductionValue;
+      const salary = emp.salary;
+      const workingHoursPerDay = emp.workingHoursPerDay;
+      const monthDays = calcMonthDays(month, year);
+      if (monthDays === 0 || emp.workingHoursPerDay === 0 || emp.salary === 0) {
+        return next(
+          new AppError(
+            `Invalid salary or working hours for employee ${emp._id}`,
+            400
+          )
+        );
+      }
+      const salaryPerHour = salary / monthDays / workingHoursPerDay;
+      const attendedDays = calcAttendedDays(employeeAttendance);
+      const totalOverTime = calcTotalOverTime(employeeAttendance);
+      const totalDeductionTime = calcTotalDeductionTime(employeeAttendance);
+      const totalBonusAmount = calcTotalBonusAmount(
+        overTimeType,
+        overTimeValue,
+        salaryPerHour,
+        totalOverTime
+      );
+      const totalDeductionAmount = calcTotalDeductionAmount(
+        deductionType,
+        deductionValue,
+        salaryPerHour,
+        totalDeductionTime
       );
 
-    const overTimeType = employee.overtimeType;
-    const overTimeValue = employee.overtimeValue;
-    const deductionType = employee.deductionType;
-    const deductionValue = employee.deductionValue;
-    const salary = employee.salary;
-    const workingHoursPerDay = employee.workingHoursPerDay;
-    const monthDays = calcMonthDays(month, year);
-    const salaryPerHour = salary / monthDays / workingHoursPerDay;
-    const attendedDays = calcAttendedDays(employeeAttendance);
-    const totalOverTime = calcTotalOverTime(employeeAttendance);
-    const totalDeductionTime = calcTotalDeductionTime(employeeAttendance);
-    const totalBonusAmount = calcTotalBonusAmount(
-      overTimeType,
-      overTimeValue,
-      salaryPerHour,
-      totalOverTime
-    );
-    const totalDeductionAmount = calcTotalDeductionAmount(
-      deductionType,
-      deductionValue,
-      salaryPerHour,
-      totalDeductionTime
-    );
+      const netSalary = calcNetSalary(
+        attendedDays,
+        officialHolidaysCount,
+        weeklyHolidays,
+        salaryPerHour,
+        workingHoursPerDay,
+        totalBonusAmount,
+        totalDeductionAmount
+      );
 
-    const netSalary = calcNetSalary(
-      attendedDays,
-      officialHolidaysCount,
-      weeklyHolidays,
-      salaryPerHour,
-      workingHoursPerDay,
-      totalBonusAmount,
-      totalDeductionAmount
-    );
-    const payrollData = {
-      employee: employee._id,
-      month,
-      monthDays,
-      year,
-      attendedDays,
-      absentDays: calcAbsentDays(employeeAttendance),
-      totalOverTime,
-      totalDeductionTime,
-      totalBonusAmount,
-      totalDeductionAmount,
-      netSalary,
-    };
+      payrollData = {
+        employee: emp._id,
+        month,
+        year,
+        monthDays,
+        attendedDays,
+        absentDays: calcAbsentDays(employeeAttendance),
+        totalOvertime: totalOverTime,
+        totalDeduction: totalDeductionTime,
+        totalBonusAmount,
+        totalDeductionAmount,
+        salaryPerHour,
+        netSalary,
+      };
+      try {
+        await Payroll.updateOne(
+          { employee: emp._id, month, year },
+          { $set: payrollData },
+          { upsert: true }
+        );
+      } catch (error) {
+        if (error.code === 11000) {
+          return next(
+            new AppError(
+              `Payroll already exists for employee ${emp._id} in ${month}-${year}`,
+              400
+            )
+          );
+        }
+        return next(
+          new AppError(
+            `Failed to save payroll for employee ${emp._id}: ${error.message}`,
+            500
+          )
+        );
+      }
+    }
     empPayroll.push(payrollData);
   }
 
