@@ -22,7 +22,8 @@ export const getAttendance = asyncHandler(async (req, res, next) => {
   if (Object.keys(req.query).length > 0) {
     if ((from || to) && !name && !department) return next(new AppError("You must provide either name or department when filtering", 400));
 
-    if (!from || !to) return next(new AppError("You must provide dates for filtering"));
+    if (!from || !to) return next(new AppError("You must provide dates for filtering", 400));
+    if (new Date(from) > new Date(to)) return next(new AppError("'from' date can't be after 'to' date", 400));
     const dateFilter = {};
     if (from) dateFilter.$gte = new Date(from);
     if (to) dateFilter.$lte = new Date(to);
