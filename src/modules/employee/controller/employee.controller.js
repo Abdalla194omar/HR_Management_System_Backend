@@ -4,8 +4,27 @@ import asyncHandler from "../../../utils/asyncHandeler.js";
 
 import AppError from "../../../utils/AppError.js";
 
+// function validate unique field (email,NationalId)
+async function validateUniqueFields(req) {
+  const { email, nationalId } = req.body;
+
+  const existingEmail = await Employee.findOne({ email });
+  if (existingEmail) {
+    return { isValid: false, message: "Email already exist" };
+  }
+  const existingNationalId = await Employee.findOne({ nationalId });
+  if (existingNationalId) {
+    return { isValid: false, message: "National ID already exist" };
+  }
+  return { isValid: true, message: "" };
+}
+
 // create employee
 export const createEmployee = asyncHandler(async (req, res) => {
+  const { isValid, message } = await validateUniqueFields(req);
+  if (!isValid) {
+    return res.status(409).json({ error: message });
+  }
   const employee = new Employee(req.body);
   await employee.save();
   res.status(201).json(employee);
@@ -71,6 +90,10 @@ export const SearchEmployee = asyncHandler(async (req, res, next) => {
 // update
 
 export const updateEmployee = asyncHandler(async (req, res, next) => {
+    const { isValid, message } = await validateUniqueFields(req,req.params.id);
+  if (!isValid) {
+    return res.status(409).json({ error: message });
+  }
   const employee = await Employee.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,
