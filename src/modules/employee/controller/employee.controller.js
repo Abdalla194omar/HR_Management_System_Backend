@@ -4,8 +4,27 @@ import asyncHandler from "../../../utils/asyncHandeler.js";
 
 import AppError from "../../../utils/AppError.js";
 
+// function validate unique field (email,NationalId)
+async function validateUniqueFields(req) {
+  const { email, nationalId } = req.body;
+
+  const existingEmail = await Employee.findOne({ email });
+  if (existingEmail) {
+    return { isValid: false, message: "Email already exist" };
+  }
+  const existingNationalId = await Employee.findOne({ nationalId });
+  if (existingNationalId) {
+    return { isValid: false, message: "National ID already exist" };
+  }
+  return { isValid: true, message: "" };
+}
+
 // create employee
 export const createEmployee = asyncHandler(async (req, res) => {
+  const { isValid, message } = await validateUniqueFields(req);
+  if (!isValid) {
+    return res.status(409).json({ error: message });
+  }
   const employee = new Employee(req.body);
   await employee.save();
   res.status(201).json(employee);
@@ -20,17 +39,27 @@ export const getAllEmployees = asyncHandler(async (req, res) => {
 
 // get all employees with filters
 export const getEmployeesFilter = asyncHandler(async (req, res, next) => {
-  const { departmentId, hireDate } = req.query;
+  const { departmentId, hireDate ,page = 1, limit = 10} = req.query;
   const query = { isDeleted: false };
 
   if (departmentId) query.department = departmentId;
   if (hireDate) query.hireDate =  { $gte: new Date(`${hireDate}-01`), $lte: new Date(`${hireDate}-31`) }; 
 
-  const employees = await Employee.find(query); 
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+  const employees = await Employee.find(query).skip(skip).limit(parseInt(limit)); 
+  const totalEmployees = await Employee.countDocuments(query);
+  const totalPages = Math.ceil(totalEmployees / limit);
+
   if (employees.length === 0) {
     return next(new AppError("No employees found matching the filters", 404));
   }
-  res.status(200).json({ message: "Employees with filters successfully", employees });
+
+  res.status(200).json({ message: "Employees with filters and pagination successfully",pagination: {
+      totalEmployees,
+      totalPages,
+      page: page,
+      limit: limit,
+    }, employees });
 });
 
 // get employee by id
@@ -61,6 +90,10 @@ export const SearchEmployee = asyncHandler(async (req, res, next) => {
 // update
 
 export const updateEmployee = asyncHandler(async (req, res, next) => {
+    const { isValid, message } = await validateUniqueFields(req,req.params.id);
+  if (!isValid) {
+    return res.status(409).json({ error: message });
+  }
   const employee = await Employee.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,
