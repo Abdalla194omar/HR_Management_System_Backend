@@ -74,6 +74,8 @@ export const getEmployeeByid = asyncHandler(async (req, res, next) => {
   res.status(201).json(employee);
 });
 
+
+
 // search by name
 export const SearchEmployee = asyncHandler(async (req, res, next) => {
   const { name } = req.query;
