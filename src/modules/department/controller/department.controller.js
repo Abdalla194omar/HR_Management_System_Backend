@@ -46,6 +46,7 @@ export const updateDepartment = asyncHandler(async (req, res, next) => {
 
 
 
+// Delete department
 export const deleteDepartment = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
 
