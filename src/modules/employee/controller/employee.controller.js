@@ -3,6 +3,8 @@ import Employee from "../../../../DB/model/Employee.js";
 import asyncHandler from "../../../utils/asyncHandeler.js";
 
 import AppError from "../../../utils/AppError.js";
+import Department from '../../../../DB/model/Department.js';
+ 
 
 // function validate unique field (email,NationalId)
 async function validateUniqueFields(req) {
@@ -19,6 +21,28 @@ async function validateUniqueFields(req) {
   return { isValid: true, message: "" };
 }
 
+// function Pagination 
+export const paginate = async (model, query, page = 1, limit = 10) => {
+  const skip = (parseInt(page) - 1) * parseInt(limit);
+
+  const [data, totalDocuments] = await Promise.all([
+    model.find(query).skip(skip).limit(parseInt(limit)),
+    model.countDocuments(query),
+  ]);
+
+  const totalPages = Math.ceil(totalDocuments / limit);
+
+  return {
+    data,
+    pagination: {
+      totalDocuments,
+      totalPages,
+      page: Number(page),
+      limit: Number(limit),
+    },
+  };
+};
+
 // create employee
 export const createEmployee = asyncHandler(async (req, res) => {
   const { isValid, message } = await validateUniqueFields(req);
@@ -33,8 +57,13 @@ export const createEmployee = asyncHandler(async (req, res) => {
 
 // get all employee
 export const getAllEmployees = asyncHandler(async (req, res) => {
-  const employees = await Employee.find({ isDeleted: false });
-  res.status(200).json({ message: "Get All employees successfully", employees });
+    const { page = 1, limit = 10 } = req.query;
+     const query = { isDeleted: false };
+
+  const result = await paginate(Employee, query, page, limit);
+
+ 
+  res.status(200).json({ message: "Get All employees successfully",  pagination: result.pagination, employees: result.data });
 });
 
 // get all employees with filters
@@ -45,21 +74,13 @@ export const getEmployeesFilter = asyncHandler(async (req, res, next) => {
   if (departmentId) query.department = departmentId;
   if (hireDate) query.hireDate =  { $gte: new Date(`${hireDate}-01`), $lte: new Date(`${hireDate}-31`) }; 
 
-  const skip = (parseInt(page) - 1) * parseInt(limit);
-  const employees = await Employee.find(query).skip(skip).limit(parseInt(limit)); 
-  const totalEmployees = await Employee.countDocuments(query);
-  const totalPages = Math.ceil(totalEmployees / limit);
+  const result = await paginate(Employee, query, page, limit);
 
-  if (employees.length === 0) {
+  if (result.data.length === 0) {
     return next(new AppError("No employees found matching the filters", 404));
   }
 
-  res.status(200).json({ message: "Employees with filters and pagination successfully",pagination: {
-      totalEmployees,
-      totalPages,
-      page: page,
-      limit: limit,
-    }, employees });
+  res.status(200).json({ message: "Employees with filters and pagination successfully",pagination:result.pagination, employees :result.data});
 });
 
 // get employee by id
@@ -74,18 +95,29 @@ export const getEmployeeByid = asyncHandler(async (req, res, next) => {
   res.status(201).json(employee);
 });
 
+//  total emp & dep
+export const getTotalEmployees = asyncHandler(async (req, res) => {
+  const totalEmployees = await Employee.countDocuments({ isDeleted: false }); 
+    const totalDepartments = await Department.countDocuments({ isDeleted: false });
 
+res.json({ totalEmployees, totalDepartments });
+});
 
 // search by name
 export const SearchEmployee = asyncHandler(async (req, res, next) => {
-  const { name } = req.query;
+  const { name ,page = 1, limit = 10} = req.query;
   if (!name) return next(new AppError("Error employee Name not found", 400));
 
-  const employees = await Employee.find({
+  const query = {
     firstName: { $regex: name, $options: "i" },
     isDeleted: false,
-  });
-  res.status(201).json(employees);
+  };
+
+    const result = await paginate(Employee, query, page, limit);
+
+  res.status(201).json({   message: "Search results with pagination",
+    pagination: result.pagination,
+    employees: result.data,});
 });
 
 
