@@ -14,6 +14,9 @@ router.get("/all", controllers.getAllEmployees);
 // get all by filter 
 router.get("/", validation(schemas.getEmployeesFilterSchema),controllers.getEmployeesFilter);
 
+// total
+router.get('/total', controllers.getTotalEmployees);
+
 
 //search
 router.get("/search", controllers.SearchEmployee);
