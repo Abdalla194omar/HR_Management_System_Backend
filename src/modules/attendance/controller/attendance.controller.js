@@ -6,6 +6,7 @@ import * as calc from "../../../utils/AttendanceCalc.js";
 
 // GET AND FILTER ATTENDANCE (filtering with |name, from, to| or |dept, from, to|)
 export const getAttendance = asyncHandler(async (req, res, next) => {
+  console.log("getAttendance");
   const { name, department, from, to, page = 1, limit = 10 } = req.query;
   const query = [];
   let attendances = [];
@@ -19,7 +20,7 @@ export const getAttendance = asyncHandler(async (req, res, next) => {
     return res.status(200).json({ message, pagination: { totalDocs, totalPages, page: pageNum, limit: limitNum }, data, queryParams: req.query });
   };
 
-  if (Object.keys(req.query).length > 0) {
+  if (name || department) {
     if ((from || to) && !name && !department) return next(new AppError("You must provide either name or department when filtering", 400));
 
     if (!from || !to) return next(new AppError("You must provide dates for filtering", 400));
@@ -87,7 +88,16 @@ export const getAttendance = asyncHandler(async (req, res, next) => {
     return sendResponse("Filtering attendances successfully", totalDocs, attendances);
   } else {
     const totalDocs = await Attendance.countDocuments({ isDeleted: false });
-    attendances = await Attendance.find().skip(skip).limit(limitNum).populate("employee");
+    attendances = await Attendance.find()
+      .skip(skip)
+      .limit(limitNum)
+      .populate({
+        path: "employee",
+        populate: {
+          path: "department",
+          select: "departmentName",
+        },
+      });
     return sendResponse("Getting all attendances successfully", totalDocs, attendances);
   }
 });
