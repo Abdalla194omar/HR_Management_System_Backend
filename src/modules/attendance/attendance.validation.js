@@ -36,14 +36,14 @@ export const createCheckIneSchema = {
     checkInTime: joi
       .string()
       .pattern(timePattern)
+      .allow("", null)
       .when("status", {
         is: "Present",
-        then: joi.required(),
+        then: joi.required().messages({
+          "any.required": "Check-in time is required when status is Present",
+          "string.pattern.base": "Check-in time must be in HH:MM 24-hour format",
+        }),
         otherwise: joi.optional(),
-      })
-      .messages({
-        "string.pattern.base": "Check-in time must be in HH:MM 24-hour format",
-        "any.required": "Check-in time is required when status is Present",
       }),
     status: joi.string().valid("Present", "Absent").default("Present").required().messages({
       "any.only": "Status must be one of Present or Absent",
@@ -109,7 +109,7 @@ export const updateAttendanceSchema = {
     checkInTime: joi.string().pattern(timePattern).messages({
       "string.pattern.base": "Check-in time must be in HH:MM 24-hour format",
     }),
-    checkOutTime: joi.string().pattern(timePattern).allow("").messages({
+    checkOutTime: joi.string().pattern(timePattern).allow("" || null).messages({
       "string.pattern.base": "Check-out time must be in HH:MM 24-hour format",
     }),
     status: joi.string().valid("Present", "Absent").default("Present").required().messages({

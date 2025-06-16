@@ -6,10 +6,7 @@ export const globalError = (error, req, res, next) => {
     return res.status(statusCode).json({
       message: error.message,
       details: req.validationErrors,
-<<<<<<< HEAD
-=======
-    
->>>>>>> department-cruds
+
     });
   }
 
