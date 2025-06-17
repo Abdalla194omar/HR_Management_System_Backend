@@ -43,6 +43,8 @@ export const paginate = async (model, query, page = 1, limit = 10) => {
   };
 };
 
+
+
 // create employee
 export const createEmployee = asyncHandler(async (req, res) => {
   const { isValid, message } = await validateUniqueFields(req);
