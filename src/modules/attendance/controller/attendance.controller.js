@@ -20,9 +20,8 @@ export const getAttendance = asyncHandler(async (req, res, next) => {
     return res.status(200).json({ message, pagination: { totalDocs, totalPages, page: pageNum, limit: limitNum }, data, queryParams: req.query });
   };
 
+  if ((from || to) && !name && !department) return next(new AppError("You must provide either name or department when filtering", 400));
   if (name || department) {
-    if ((from || to) && !name && !department) return next(new AppError("You must provide either name or department when filtering", 400));
-
     if (!from || !to) return next(new AppError("You must provide dates for filtering", 400));
     if (new Date(from) > new Date(to)) return next(new AppError("'from' date can't be after 'to' date", 400));
     const dateFilter = {};
@@ -82,15 +81,24 @@ export const getAttendance = asyncHandler(async (req, res, next) => {
     const totalResult = await Attendance.aggregate(countQuery);
     const totalDocs = totalResult[0]?.total || 0;
 
-    query.push({ $skip: skip }, { $limit: limitNum });
+    query.push({ $skip: skip }, { $limit: limitNum }, { $sort: { date: -1 } });
 
-    attendances = await Attendance.aggregate(query);
+    const attendanceIds = await Attendance.aggregate([...query, { $project: { _id: 1 } }]);
+    console.log("attendanceIds", attendanceIds);
+    const attendances = await Attendance.find({ _id: { $in: attendanceIds } }).sort({ date: -1 }).populate({
+      path: "employee",
+      populate: {
+        path: "department",
+        select: "departmentName",
+      },
+    });
     return sendResponse("Filtering attendances successfully", totalDocs, attendances);
   } else {
     const totalDocs = await Attendance.countDocuments({ isDeleted: false });
     attendances = await Attendance.find()
       .skip(skip)
       .limit(limitNum)
+      .sort({ date: -1 })
       .populate({
         path: "employee",
         populate: {

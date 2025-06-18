@@ -6,9 +6,7 @@ export const createHoliday = asyncHandler(async (req, res) => {
 
   const existingHoliday = await Holiday.findOne({ date });
   if (existingHoliday) {
-    return res
-      .status(400)
-      .json({ error: "Holiday already exists on this date" });
+    return res.status(400).json({ error: "Holiday already exists on this date" });
   }
 
   const newHoliday = new Holiday({ name, date, type });
@@ -37,10 +35,7 @@ export const updateHoliday = asyncHandler(async (req, res) => {
   if (!holiday) return res.status(404).json({ error: "Holiday not found" });
 
   const existingHoliday = await Holiday.findOne({ date, _id: { $ne: id } });
-  if (existingHoliday)
-    return res
-      .status(400)
-      .json({ error: "Another holiday exists on this date" });
+  if (existingHoliday) return res.status(400).json({ error: "Another holiday exists on this date" });
 
   holiday.name = name || holiday.name;
   holiday.date = date ? new Date(date) : holiday.date;
