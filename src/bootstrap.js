@@ -11,7 +11,12 @@ import { router as attendanceRoutes } from "./modules/attendance/attendance.rout
 import authRoutes from "./modules/auth/hr.router.js";
 
 const initializeApp = (app, express) => {
-  app.use(cors());
+  app.use(
+  cors({
+    origin: "http://localhost:5173", // 
+    credentials: true,               // 
+  })
+);
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   connection();
