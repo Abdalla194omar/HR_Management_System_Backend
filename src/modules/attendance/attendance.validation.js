@@ -101,6 +101,15 @@ export const createAttendanceSchema = {
       "any.only": "Status must be one of Present or Absent",
       "string.base": "Status must be a string",
     }),
+    //update for getemployee payroll
+    lateDurationInHours: joi.number().min(0).optional().messages({
+      "number.base": "Late duration must be a number",
+      "number.min": "Late duration must be 0 or more",
+    }),
+    overtimeDurationInHours: joi.number().min(0).optional().messages({
+      "number.base": "Overtime duration must be a number",
+      "number.min": "Overtime duration must be 0 or more",
+    }),
   }),
 };
 
