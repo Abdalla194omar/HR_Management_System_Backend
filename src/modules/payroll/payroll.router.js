@@ -1,8 +1,14 @@
 import express from "express";
-import { getAllPayrolls } from "./controllers/payroll.controller.js";
+
+import {
+  getAllPayrolls,
+  getEmployeePayroll, // 
+} from "./controllers/payroll.controller.js";
 
 const router = express.Router();
 
 router.get("/", getAllPayrolls);
 
-export default router;
+router.get("/employee", getEmployeePayroll); // 
+
+export default router; 
