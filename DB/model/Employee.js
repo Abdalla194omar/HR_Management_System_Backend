@@ -158,6 +158,7 @@ const EmployeeSchema = new Schema(
 );
 
 
+
 EmployeeSchema.virtual('fullName').get(function () {
   return `${this.firstName} ${this.lastName}`;
 });
