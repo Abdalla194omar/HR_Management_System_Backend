@@ -22,11 +22,16 @@ async function validateUniqueFields(req) {
 }
 
 // function Pagination 
-export const paginate = async (model, query, page = 1, limit = 10) => {
+export const paginate = async (model, query, page = 1, limit = 10 ,populateOptions =null ) => {
   const skip = (parseInt(page) - 1) * parseInt(limit);
+    let dbQuery = model.find(query).skip(skip).limit(limit);
+ // Add populate
+  if (populateOptions) {
+    dbQuery = dbQuery.populate(populateOptions);
+  }
 
   const [data, totalDocuments] = await Promise.all([
-    model.find(query).skip(skip).limit(parseInt(limit)),
+    dbQuery,
     model.countDocuments(query),
   ]);
 
@@ -61,8 +66,8 @@ export const createEmployee = asyncHandler(async (req, res) => {
 export const getAllEmployees = asyncHandler(async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
      const query = { isDeleted: false };
-
-  const result = await paginate(Employee, query, page, limit);
+// add populate 
+  const result = await paginate(Employee, query, page, limit,{ path: "department", select: "departmentName" });
 
  
   res.status(200).json({ message: "Get All employees successfully",  pagination: result.pagination, employees: result.data });
@@ -76,7 +81,7 @@ export const getEmployeesFilter = asyncHandler(async (req, res, next) => {
   if (departmentId) query.department = departmentId;
   if (hireDate) query.hireDate =  { $gte: new Date(`${hireDate}-01`), $lte: new Date(`${hireDate}-31`) }; 
 
-  const result = await paginate(Employee, query, page, limit);
+  const result = await paginate(Employee, query, page, limit,{ path: "department", select: "departmentName" });
 
   if (result.data.length === 0) {
     return next(new AppError("No employees found matching the filters", 404));
@@ -91,7 +96,7 @@ export const getEmployeeByid = asyncHandler(async (req, res, next) => {
   const employee = await Employee.findById({
     _id: req.params.id,
     isDeleted: false,
-  });
+  }).populate({ path: "department", select: "departmentName" });
   if (!employee) return next(new AppError("Error employee not found", 404));
 
   res.status(201).json(employee);
@@ -115,7 +120,7 @@ export const SearchEmployee = asyncHandler(async (req, res, next) => {
     isDeleted: false,
   };
 
-    const result = await paginate(Employee, query, page, limit);
+    const result = await paginate(Employee, query, page, limit,{ path: "department", select: "departmentName" });
 
   res.status(201).json({   message: "Search results with pagination",
     pagination: result.pagination,
