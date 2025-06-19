@@ -81,4 +81,6 @@ const PayrollSchema = new Schema(
   { timestamps: true }
 );
 
+PayrollSchema.index({ employee: 1, month: 1, year: 1 }, { unique: true });
+
 export default mongoose.model("Payroll", PayrollSchema);
