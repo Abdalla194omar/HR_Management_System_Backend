@@ -17,6 +17,7 @@ const initializeApp = (app, express) => {
       credentials: true
     })
   );
+
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   connection();
