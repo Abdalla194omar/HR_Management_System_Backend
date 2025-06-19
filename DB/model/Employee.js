@@ -162,5 +162,6 @@ EmployeeSchema.virtual('fullName').get(function () {
   return `${this.firstName} ${this.lastName}`;
 });
 
+
 export default model("Employee", EmployeeSchema);
 
