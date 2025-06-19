@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 const { Schema, model } = mongoose;
 
 const EmployeeSchema = new Schema(
+
   {
     firstName: {
       type: String,
@@ -30,7 +31,7 @@ const EmployeeSchema = new Schema(
       match: [/^\+?\d{10,15}$/, "Phone number must be valid"],
     },
     department: {
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Department",
       required: [true, "Department is required"],
     },
@@ -150,8 +151,18 @@ const EmployeeSchema = new Schema(
       },
     },
   },
-  { timestamps: true }
+  { timestamps: true,
+     toJSON: { virtuals: true }, 
+    toObject: { virtuals: true },
+   }
 );
+
+
+
+EmployeeSchema.virtual('fullName').get(function () {
+  return `${this.firstName} ${this.lastName}`;
+});
+
 
 export default model("Employee", EmployeeSchema);
 
