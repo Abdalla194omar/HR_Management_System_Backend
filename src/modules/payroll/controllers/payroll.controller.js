@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-// Importing models and utilities
-=======
 import mongoose from "mongoose";
->>>>>>> attendance-cruds-v4
 import Attendence from "../../../../DB/model/Attendence.js";
 import Employee from "../../../../DB/model/Employee.js";
 import Holiday from "../../../../DB/model/Holiday.js";
@@ -116,28 +112,6 @@ function calcNetSalary(attendedDays, holidays, weekendDays, salaryPerHour, worki
 export const getAllPayrolls = asyncHandler(async (req, res, next) => {
   const { month, year } = req.query;
 
-<<<<<<< HEAD
-  const [employees, holidays, monthAttendence] = await Promise.all([
-    Employee.find(),
-    Holiday.find({
-      $expr: {
-        $and: [
-          { $eq: [{ $month: "$date" }, +month] },
-          { $eq: [{ $year: "$date" }, +year] },
-        ],
-      },
-    }),
-    Attendence.find({
-      $expr: {
-        $and: [
-          { $eq: [{ $year: "$date" }, +year] },
-          { $eq: [{ $month: "$date" }, +month] },
-        ],
-      },
-    }).populate("employee"),
-  ]);
-
-=======
   if (!/^(0[1-9]|1[0-2])$/.test(month) || !/^\d{4}$/.test(year)) {
     return next(new AppError("Year Or Month Format Is Not Valid", 400));
   }
@@ -177,7 +151,6 @@ export const getAllPayrolls = asyncHandler(async (req, res, next) => {
     _id: { $in: employeesWithAttendance },
   });
 
->>>>>>> attendance-cruds-v4
   let empPayroll = [];
 
   for (const emp of employees) {
@@ -185,47 +158,6 @@ export const getAllPayrolls = asyncHandler(async (req, res, next) => {
       a.employee._id.equals(emp._id)
     );
 
-<<<<<<< HEAD
-    if (!employeeAttendance.length) continue;
-
-    const { weeklyHolidays, officialHolidaysCount } = calcHolidaysInAttendanceRange(
-      emp,
-      employeeAttendance.map((a) => new Date(a.date)),
-      holidays
-    );
-
-    const salaryPerHour = emp.salary / calcMonthDays(month, year) / emp.workingHoursPerDay;
-    const attendedDays = calcAttendedDays(employeeAttendance);
-    const totalOverTime = calcTotalOverTime(employeeAttendance);
-    const totalDeductionTime = calcTotalDeductionTime(employeeAttendance);
-
-    const totalBonusAmount = calcTotalBonusAmount(emp.overtimeType, emp.overtimeValue, salaryPerHour, totalOverTime);
-    const totalDeductionAmount = calcTotalDeductionAmount(emp.deductionType, emp.deductionValue, salaryPerHour, totalDeductionTime);
-
-    const netSalary = calcNetSalary(
-      attendedDays,
-      officialHolidaysCount,
-      weeklyHolidays,
-      salaryPerHour,
-      emp.workingHoursPerDay,
-      totalBonusAmount,
-      totalDeductionAmount
-    );
-
-    empPayroll.push({
-      employee: emp._id,
-      month,
-      year,
-      monthDays: calcMonthDays(month, year),
-      attendedDays,
-      absentDays: calcAbsentDays(employeeAttendance),
-      totalOverTime,
-      totalDeductionTime,
-      totalBonusAmount,
-      totalDeductionAmount,
-      netSalary,
-    });
-=======
     const existingPayroll = await Payroll.findOne({
       employee: emp._id,
       month,
@@ -332,7 +264,6 @@ export const getAllPayrolls = asyncHandler(async (req, res, next) => {
       }
     }
     empPayroll.push(payrollData);
->>>>>>> attendance-cruds-v4
   }
 
   res.status(200).json(empPayroll);
