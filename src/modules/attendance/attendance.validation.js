@@ -109,7 +109,7 @@ export const updateAttendanceSchema = {
     checkInTime: joi.string().pattern(timePattern).messages({
       "string.pattern.base": "Check-in time must be in HH:MM 24-hour format",
     }),
-    checkOutTime: joi.string().pattern(timePattern).allow("").messages({
+    checkOutTime: joi.string().pattern(timePattern).allow("", null).optional().messages({
       "string.pattern.base": "Check-out time must be in HH:MM 24-hour format",
     }),
     status: joi.string().valid("Present", "Absent").default("Present").required().messages({
