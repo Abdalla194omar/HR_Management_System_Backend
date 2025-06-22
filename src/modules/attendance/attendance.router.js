@@ -7,7 +7,7 @@ export const router = express.Router();
 
 router.get("/", validation(schemas.getAttendanceSchema), controllers.getAttendance);
 
-// router.get("/", validation(schemas.getAttendanceSchema), getAttendanceV2);
+router.get("/absence", controllers.getTodayAbsence);
 
 router.post("/", validation(schemas.createAttendanceSchema), controllers.createAttendance);
 
