@@ -36,6 +36,7 @@ export const createCheckIneSchema = {
     checkInTime: joi
       .string()
       .pattern(timePattern)
+      .allow("", null)
       .when("status", {
         is: "Present",
         then: joi.required(),

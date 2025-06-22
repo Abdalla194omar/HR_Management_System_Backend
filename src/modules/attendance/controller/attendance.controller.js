@@ -4,110 +4,121 @@ import asyncHandler from "../../../utils/asyncHandeler.js";
 import Employee from "../../../../DB/model/Employee.js";
 import * as calc from "../../../utils/AttendanceCalc.js";
 
-// GET AND FILTER ATTENDANCE (filtering with |name, from, to| or |dept, from, to|)
+// GET AND FILTER ATTENDANCE (filtering with |name, dept, from, to|)
 export const getAttendance = asyncHandler(async (req, res, next) => {
   const { name, department, from, to, page = 1, limit = 10 } = req.query;
+  const employeeQuery = [
+    { $match: { isDeleted: false } },
+    {
+      $lookup: {
+        from: "employees",
+        localField: "employee",
+        foreignField: "_id",
+        as: "employeeData",
+      },
+    },
+    { $unwind: { path: "$employeeData", preserveNullAndEmptyArrays: true } },
+  ];
   const query = [];
+  const dateFilter = {};
   let attendances = [];
 
   const pageNum = parseInt(page, 10);
   const limitNum = parseInt(limit, 10);
   const skip = (pageNum - 1) * limitNum;
 
-  const sendResponse = (message, totalDocs, data) => {
-    const totalPages = Math.ceil(totalDocs / limitNum);
-    return res.status(200).json({ message, pagination: { totalDocs, totalPages, page: pageNum, limit: limitNum }, data, queryParams: req.query });
-  };
-
-  if ((from || to) && !name && !department) return next(new AppError("You must provide either name or department when filtering", 400));
-  if (Object.keys(req.query).length > 0) {
-
-    if (!from || !to) return next(new AppError("You must provide dates for filtering", 400));
-    if (new Date(from) > new Date(to)) return next(new AppError("'from' date can't be after 'to' date", 400));
-    const dateFilter = {};
-    if (from) dateFilter.$gte = new Date(from);
-    if (to) dateFilter.$lte = new Date(to);
-    const matchConditions = [];
-    matchConditions.push({ date: dateFilter });
-
-    query.push(
-      { $match: { isDeleted: false } },
-      {
-        $lookup: {
-          from: "employees",
-          localField: "employee",
-          foreignField: "_id",
-          as: "employeeData",
-        },
-      },
-      { $unwind: { path: "$employeeData", preserveNullAndEmptyArrays: true } }
-    );
-
-    if (name) {
-      matchConditions.push({
+  if (name) {
+    query.push(...employeeQuery, {
+      $match: {
         $expr: {
           $regexMatch: {
             input: { $concat: ["$employeeData.firstName", " ", "$employeeData.lastName"] },
             regex: new RegExp(name, "i"),
           },
         },
-      });
-    }
-    if (department) {
-      query.push(
-        {
-          $lookup: {
-            from: "departments",
-            localField: "employeeData.department",
-            foreignField: "_id",
-            as: "departmentData",
-          },
-        },
-        { $unwind: { path: "$departmentData", preserveNullAndEmptyArrays: true } }
-      );
-      matchConditions.push({
-        "departmentData.departmentName": { $regex: new RegExp(department, "i") },
-      });
-    }
-
-    query.push({
-      $match: {
-        $and: matchConditions,
       },
     });
+  }
+  if (department) {
+    query.push(
+      ...employeeQuery,
+      {
+        $lookup: {
+          from: "departments",
+          localField: "employeeData.department",
+          foreignField: "_id",
+          as: "departmentData",
+        },
+      },
+      { $unwind: { path: "$departmentData", preserveNullAndEmptyArrays: true } },
+      {
+        $match: {
+          "departmentData.departmentName": { $regex: new RegExp(department, "i") },
+        },
+      }
+    );
+  }
 
-    const countQuery = [...query];
-    countQuery.push({ $count: "total" });
-    const totalResult = await Attendance.aggregate(countQuery);
-    const totalDocs = totalResult[0]?.total || 0;
+  if (from && to) {
+    if (new Date(from) > new Date(to)) return next(new AppError("'from' date can't be after 'to' date", 400));
+  }
+  if (from) dateFilter.$gte = new Date(from);
+  if (to) dateFilter.$lte = new Date(to);
+  if (Object.keys(dateFilter).length > 0) query.push({ $match: { date: dateFilter } });
 
-    query.push({ $skip: skip }, { $limit: limitNum }, { $sort: { date: -1 } });
+  const countQuery = [...query];
+  countQuery.push({ $count: "total" });
+  const totalResult = await Attendance.aggregate(countQuery);
+  const totalDocs = totalResult[0]?.total || 0;
+  const totalPages = Math.ceil(totalDocs / limitNum);
 
-    const attendanceIds = await Attendance.aggregate([...query, { $project: { _id: 1 } }]);
-    console.log("attendanceIds", attendanceIds);
-    const attendances = await Attendance.find({ _id: { $in: attendanceIds } }).sort({ date: -1 }).populate({
+  query.push({ $sort: { date: -1 } }, { $skip: skip }, { $limit: limitNum });
+
+  const attendanceIds = await Attendance.aggregate([...query, { $project: { _id: 1 } }]);
+  attendances = await Attendance.find({ _id: { $in: attendanceIds } })
+    .sort({ date: -1 })
+    .populate({
       path: "employee",
       populate: {
         path: "department",
         select: "departmentName",
       },
     });
-    return sendResponse("Filtering attendances successfully", totalDocs, attendances);
-  } else {
-    const totalDocs = await Attendance.countDocuments({ isDeleted: false });
-    attendances = await Attendance.find()
-      .skip(skip)
-      .limit(limitNum)
-      .sort({ date: -1 })
-      .populate({
-        path: "employee",
-        populate: {
-          path: "department",
-          select: "departmentName",
-        },
-      });
-    return sendResponse("Getting all attendances successfully", totalDocs, attendances);
-  }
+  return res.status(200).json({
+    message: "Getting attendances successfully",
+    pagination: { totalDocs, totalPages, page: pageNum, limit: limitNum },
+    data: attendances,
+    queryParams: req.query,
+  });
+});
+
+// Get Today Absence
+export const getTodayAbsence = asyncHandler(async (req, res, next) => {
+  const todayDate = new Date();
+  todayDate.setHours(0, 0, 0, 0);
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const absenceToday = await Attendance.find({ status: "Absent", date: { $gt: todayDate, $lt: tomorrowDate } }).populate({
+    path: "employee",
+    select: "firstName lastName",
+    populate: {
+      path: "department",
+      select: "departmentName",
+    },
+  });
+  const attendanceToday = await Attendance.countDocuments({ date: { $gt: todayDate, $lt: tomorrowDate } }).populate({
+    path: "employee",
+    select: "firstName lastName",
+    populate: {
+      path: "department",
+      select: "departmentName",
+    },
+  });
+  return res.json({
+    data: absenceToday,
+    totalDocs: absenceToday.length,
+    absencePercentage: (absenceToday.length / attendanceToday) * 100,
+  });
 });
 
 // CREATE CHECKIN
