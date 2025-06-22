@@ -11,4 +11,4 @@ router.get("/", getAllPayrolls);
 
 router.get("/employee", getEmployeePayroll); // 
 
-export default router; 
+export default router;
