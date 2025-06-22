@@ -8,7 +8,6 @@ import * as calc from "../../../utils/AttendanceCalc.js";
 export const getAttendance = asyncHandler(async (req, res, next) => {
   const { name, department, from, to, page = 1, limit = 10 } = req.query;
   const employeeQuery = [
-    { $match: { isDeleted: false } },
     {
       $lookup: {
         from: "employees",
@@ -19,7 +18,7 @@ export const getAttendance = asyncHandler(async (req, res, next) => {
     },
     { $unwind: { path: "$employeeData", preserveNullAndEmptyArrays: true } },
   ];
-  const query = [];
+  const query = [{ $match: { isDeleted: false } }, ...employeeQuery];
   const dateFilter = {};
   let attendances = [];
 
@@ -28,7 +27,7 @@ export const getAttendance = asyncHandler(async (req, res, next) => {
   const skip = (pageNum - 1) * limitNum;
 
   if (name) {
-    query.push(...employeeQuery, {
+    query.push({
       $match: {
         $expr: {
           $regexMatch: {
@@ -41,7 +40,6 @@ export const getAttendance = asyncHandler(async (req, res, next) => {
   }
   if (department) {
     query.push(
-      ...employeeQuery,
       {
         $lookup: {
           from: "departments",
@@ -72,7 +70,15 @@ export const getAttendance = asyncHandler(async (req, res, next) => {
   const totalDocs = totalResult[0]?.total || 0;
   const totalPages = Math.ceil(totalDocs / limitNum);
 
-  query.push({ $sort: { date: -1 } }, { $skip: skip }, { $limit: limitNum });
+  query.push(
+    {
+      $sort: {
+        date: -1,
+      },
+    },
+    { $skip: skip },
+    { $limit: limitNum }
+  );
 
   const attendanceIds = await Attendance.aggregate([...query, { $project: { _id: 1 } }]);
   attendances = await Attendance.find({ _id: { $in: attendanceIds } })
@@ -84,6 +90,7 @@ export const getAttendance = asyncHandler(async (req, res, next) => {
         select: "departmentName",
       },
     });
+
   return res.status(200).json({
     message: "Getting attendances successfully",
     pagination: { totalDocs, totalPages, page: pageNum, limit: limitNum },
