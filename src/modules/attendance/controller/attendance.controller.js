@@ -100,7 +100,7 @@ export const getAttendance = asyncHandler(async (req, res, next) => {
   });
 });
 
-// Get Today Absence
+// Get Today's Absence
 export const getTodayAbsence = asyncHandler(async (req, res, next) => {
   const todayDate = new Date();
   todayDate.setHours(0, 0, 0, 0);
@@ -122,10 +122,51 @@ export const getTodayAbsence = asyncHandler(async (req, res, next) => {
       select: "departmentName",
     },
   });
-  return res.json({
+  return res.status(200).json({
     data: absenceToday,
     totalDocs: absenceToday.length,
     absencePercentage: (absenceToday.length / attendanceToday) * 100,
+  });
+});
+
+// Get Attendance Graph
+export const getAttendanceGraph = asyncHandler(async (req, res, next) => {
+  const [t1From, t1To, t2From, t2To, t3From, t3To] = [1, 10, 11, 20, 21, 31];
+  const populateQuery = { path: "employee", select: "firstName lastName", populate: { path: "department", select: "departmentName" } };
+  const targetMonth = new Date().getMonth() + 1;
+  const targetYear = new Date().getFullYear();
+
+  function tQuery(from, to) {
+    return {
+      $expr: {
+        $and: [
+          { $eq: [{ $year: "$date" }, targetYear] },
+          { $eq: [{ $month: "$date" }, targetMonth] },
+          { $gte: [{ $dayOfMonth: "$date" }, from] },
+          { $lte: [{ $dayOfMonth: "$date" }, to] },
+        ],
+      },
+    };
+  }
+
+  const allT1Attendance = await Attendance.countDocuments({ isDeleted: false, ...tQuery(t1From, t1To) });
+  const presentT1Attendance = await Attendance.countDocuments({ isDeleted: false, status: "Present", ...tQuery(t1From, t1To) });
+  const allT2Attendance = await Attendance.countDocuments({ isDeleted: false, ...tQuery(t2From, t2To) });
+  const presentT2Attendance = await Attendance.countDocuments({ isDeleted: false, status: "Present", ...tQuery(t2From, t2To) });
+  const allT3Attendance = await Attendance.countDocuments({ isDeleted: false, ...tQuery(t3From, t3To) });
+  const presentT3Attendance = await Attendance.countDocuments({ isDeleted: false, status: "Present", ...tQuery(t3From, t3To) });
+
+  return res.status(200).json({
+    targetMonth,
+    allT1Attendance,
+    presentT1Attendance,
+    allT2Attendance,
+    presentT2Attendance,
+    allT3Attendance,
+    presentT3Attendance,
+    presentT1Percent: ((presentT1Attendance / allT1Attendance) * 100).toFixed(1),
+    presentT2Percent: ((presentT2Attendance / allT2Attendance) * 100).toFixed(1),
+    presentT3Percent: ((presentT3Attendance / allT3Attendance) * 100).toFixed(1),
   });
 });
 
