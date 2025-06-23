@@ -9,6 +9,8 @@ router.get("/", validation(schemas.getAttendanceSchema), controllers.getAttendan
 
 router.get("/absence", controllers.getTodayAbsence);
 
+router.get("/graph", controllers.getAttendanceGraph);
+
 router.post("/", validation(schemas.createAttendanceSchema), controllers.createAttendance);
 
 router.post("/checkin", validation(schemas.createCheckIneSchema), controllers.createCheckIn);
