@@ -17,10 +17,6 @@ const HRSchema = new Schema(
       type: String,
       required: [true, "Password is required"],
       minlength: [8, "Password must be at least 8 characters"],
-      match: [
-        /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/,
-        "Password must contain letters, numbers, and be at least 8 characters",
-      ],
     },
     name: {
       type: String,
@@ -50,7 +46,7 @@ const HRSchema = new Schema(
 HRSchema.pre("save", async function (next) {
   if (this.isModified("password")) {
     this.password = await bcrypt.hash(this.password, 12);
-    console.log("Hashed password:", this.password); // Debugging
+    console.log("Hashed password:", this.password); 
   }
   next();
 });

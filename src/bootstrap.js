@@ -20,7 +20,6 @@ const initializeApp = (app, express) => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   connection();
-
   app.use("/api/attendance", attendanceRoutes);
   app.use("/api/departments", departmentRoutes);
   app.use("/api/employees", employeeRoutes);
@@ -28,8 +27,12 @@ const initializeApp = (app, express) => {
 
   app.use("/api/holidays", holidayRoutes);
   app.use("/api/payrolls", payrollRoutes);
+
+
+
   app.use(globalError);
 
+ 
   app.use((req, res) => {
     res.status(404).json({
       success: false,

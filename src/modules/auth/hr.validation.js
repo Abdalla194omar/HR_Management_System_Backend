@@ -1,6 +1,5 @@
 import Joi from "joi";
 
-
 const validateHR = (schema) => {
   return (req, res, next) => {
     try {

@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { AppError } from "./errorHandler.js"; 
+import { AppError } from "./errorHandler.js";
 
 exports.auth = (req, res, next) => {
   let token;
@@ -13,15 +13,15 @@ exports.auth = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, "secret123");
-    req.user = decoded; 
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); 
+    req.user = decoded;
     next();
   } catch (err) {
     return next(new AppError("Invalid token or session expired", 401));
   }
 };
 
-exports.protect = exports.auth; 
+exports.protect = exports.auth;
 
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {
