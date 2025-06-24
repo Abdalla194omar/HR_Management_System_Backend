@@ -1,8 +1,51 @@
-
 import Joi from "joi";
 import validation from "../../middleWare/validation.js";
 
-const holidaySchema = {
+
+const createHolidaySchema = {
+  body: Joi.object({
+    name: Joi.string()
+      .min(2)
+      .max(100)
+      .trim()
+      .required()
+      .messages({
+        "string.min": "Holiday name must be at least 2 characters",
+        "string.max": "Holiday name must be at most 100 characters",
+        "any.required": "Holiday name is required",
+      }),
+    date: Joi.date()
+      .min('now')
+      .iso()
+      .required()
+      .messages({
+        "date.base": "Invalid date format",
+        "date.min": "Holiday date cannot be in the past",
+        "date.isoDate": "Date must be in ISO format",
+        "any.required": "Date is required",
+      }),
+    type: Joi.string()
+      .valid("Official", "Custom")
+      .required()
+      .messages({
+        "any.only": "Type must be either 'Official' or 'Custom'",
+        "any.required": "Type is required",
+      }),
+  }).min(1),
+};
+
+const updateHolidaySchema = {
+  params: Joi.object({
+    id: Joi.string()
+      .required()
+      .hex()
+      .length(24)
+      .messages({
+        "any.required": "Holiday ID is required",
+        "string.hex": "Invalid ID format",
+        "string.length": "ID must be 24 characters long",
+      }),
+  }),
   body: Joi.object({
     name: Joi.string()
       .min(2)
@@ -15,10 +58,12 @@ const holidaySchema = {
       }),
     date: Joi.date()
       .min('now')
+      .iso()
       .optional()
       .messages({
         "date.base": "Invalid date format",
         "date.min": "Holiday date cannot be in the past",
+        "date.isoDate": "Date must be in ISO format",
       }),
     type: Joi.string()
       .valid("Official", "Custom")
@@ -26,8 +71,11 @@ const holidaySchema = {
       .messages({
         "any.only": "Type must be either 'Official' or 'Custom'",
       }),
-  }).min(1),
+  }).min(1), 
+};
 
+
+const deleteHolidaySchema = {
   params: Joi.object({
     id: Joi.string()
       .required()
@@ -39,16 +87,22 @@ const holidaySchema = {
         "string.length": "ID must be 24 characters long",
       }),
   }),
+};
 
+
+const getHolidaysSchema = {
   query: Joi.object({
     type: Joi.string()
       .valid("Official", "Custom")
       .messages({
         "any.only": "Type must be either 'Official' or 'Custom'",
       }),
-    date: Joi.date().messages({
-      "date.base": "Invalid date format",
-    }),
+    date: Joi.date()
+      .iso()
+      .messages({
+        "date.base": "Invalid date format",
+        "date.isoDate": "Date must be in ISO format",
+      }),
     page: Joi.number()
       .integer()
       .min(1)
@@ -70,4 +124,7 @@ const holidaySchema = {
   }).optional(),
 };
 
-export const validateHoliday = validation(holidaySchema);
+export const validateCreateHoliday = validation(createHolidaySchema);
+export const validateUpdateHoliday = validation(updateHolidaySchema);
+export const validateDeleteHoliday = validation(deleteHolidaySchema);
+export const validateGetHolidays = validation(getHolidaysSchema);

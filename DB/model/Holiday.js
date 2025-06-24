@@ -6,6 +6,9 @@ const HolidaySchema = new Schema(
     name: {
       type: String,
       required: [true, "Holiday name is required"],
+      trim: true,
+      minlength: [2, "Holiday name must be at least 2 characters"],
+      maxlength: [100, "Holiday name must be at most 100 characters"],
     },
     date: {
       type: Date,
