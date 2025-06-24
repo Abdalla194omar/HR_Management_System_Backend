@@ -27,7 +27,9 @@ export function getDayType(date, employee, officialHolidays) {
 
   if (employeeWeekendNumbers.includes(date.getDay())) return "weekly_holiday";
 
-  if (officialHolidays.some((h) => h.date.toISOString().split("T")[0] === dateStr)) {
+  if (
+    officialHolidays.some((h) => h.date.toISOString().split("T")[0] === dateStr)
+  ) {
     return "official_holiday";
   }
 
@@ -35,14 +37,22 @@ export function getDayType(date, employee, officialHolidays) {
 }
 
 // Count weekly and official holidays within attendance date range
-function calcHolidaysInAttendanceRange(employee, attendanceDates, officialHolidays) {
+function calcHolidaysInAttendanceRange(
+  employee,
+  attendanceDates,
+  officialHolidays
+) {
   let weeklyHolidays = 0;
   let officialHolidaysCount = 0;
 
   const firstDate = new Date(Math.min(...attendanceDates));
   const lastDate = new Date(Math.max(...attendanceDates));
 
-  for (let date = new Date(firstDate); date <= lastDate; date.setDate(date.getDate() + 1)) {
+  for (
+    let date = new Date(firstDate);
+    date <= lastDate;
+    date.setDate(date.getDate() + 1)
+  ) {
     const dayType = getDayType(date, employee, officialHolidays);
     if (dayType === "weekly_holiday") weeklyHolidays++;
     else if (dayType === "official_holiday") officialHolidaysCount++;
@@ -67,7 +77,9 @@ function calcMonthDays(month, year) {
 
 // Count present days
 function calcAttendedDays(employeeAttendance) {
-  return employeeAttendance.filter((a) => a.status === "Present" && a.checkInTime && a.checkOutTime).length;
+  return employeeAttendance.filter(
+    (a) => a.status === "Present" && a.checkInTime && a.checkOutTime
+  ).length;
 }
 
 // Count absent days
@@ -77,32 +89,54 @@ function calcAbsentDays(employeeAttendance) {
 
 // Calculate total overtime hours
 function calcTotalOverTime(employeeAttendance) {
-  return employeeAttendance.reduce((total, a) => total + a.overtimeDurationInHours, 0);
+  return employeeAttendance.reduce(
+    (total, a) => total + a.overtimeDurationInHours,
+    0
+  );
 }
 
 // Calculate total late hours
 function calcTotalDeductionTime(employeeAttendance) {
-  return employeeAttendance.reduce((total, a) => total + a.lateDurationInHours, 0);
+  return employeeAttendance.reduce(
+    (total, a) => total + a.lateDurationInHours,
+    0
+  );
 }
 
 // Calculate total bonus based on overtime
-function calcTotalBonusAmount(overTimeType, overTimeValue, salaryPerHour, totalOvertime) {
+function calcTotalBonusAmount(
+  overTimeType,
+  overTimeValue,
+  salaryPerHour,
+  totalOvertime
+) {
   return overTimeType === "hour"
     ? totalOvertime * overTimeValue * salaryPerHour
     : totalOvertime * overTimeValue;
 }
 
 // Calculate total deduction based on lateness
-function calcTotalDeductionAmount(deductionType, deductionValue, salaryPerHour, totalDeductionTime) {
+function calcTotalDeductionAmount(
+  deductionType,
+  deductionValue,
+  salaryPerHour,
+  totalDeductionTime
+) {
   return deductionType === "hour"
     ? totalDeductionTime * deductionValue * salaryPerHour
     : totalDeductionTime * deductionValue;
 }
 
 // Calculate net salary
-function calcNetSalary(attendedDays, holidays, weekendDays, salaryPerHour, workingHoursPerDay, totalBonusAmount, totalDeductionAmount) {
+function calcNetSalary(
+  attendedDays,
+  salaryPerHour,
+  workingHoursPerDay,
+  totalBonusAmount,
+  totalDeductionAmount
+) {
   return (
-    (attendedDays + holidays + weekendDays) * salaryPerHour * workingHoursPerDay +
+    attendedDays * salaryPerHour * workingHoursPerDay +
     totalBonusAmount -
     totalDeductionAmount
   );
@@ -218,8 +252,6 @@ export const getAllPayrolls = asyncHandler(async (req, res, next) => {
 
       const netSalary = calcNetSalary(
         attendedDays,
-        officialHolidaysCount,
-        weeklyHolidays,
         salaryPerHour,
         workingHoursPerDay,
         totalBonusAmount,
@@ -300,24 +332,34 @@ export const getEmployeePayroll = asyncHandler(async (req, res, next) => {
     return res.status(404).json({ message: "No attendance records found" });
   }
 
-  const { weeklyHolidays, officialHolidaysCount } = calcHolidaysInAttendanceRange(
-    employee,
-    employeeAttendance.map((a) => new Date(a.date)),
-    holidays
-  );
+  const { weeklyHolidays, officialHolidaysCount } =
+    calcHolidaysInAttendanceRange(
+      employee,
+      employeeAttendance.map((a) => new Date(a.date)),
+      holidays
+    );
 
-  const salaryPerHour = employee.salary / calcMonthDays(month, year) / employee.workingHoursPerDay;
+  const salaryPerHour =
+    employee.salary / calcMonthDays(month, year) / employee.workingHoursPerDay;
   const attendedDays = calcAttendedDays(employeeAttendance);
   const totalOverTime = calcTotalOverTime(employeeAttendance);
   const totalDeductionTime = calcTotalDeductionTime(employeeAttendance);
 
-  const totalBonusAmount = calcTotalBonusAmount(employee.overtimeType, employee.overtimeValue, salaryPerHour, totalOverTime);
-  const totalDeductionAmount = calcTotalDeductionAmount(employee.deductionType, employee.deductionValue, salaryPerHour, totalDeductionTime);
+  const totalBonusAmount = calcTotalBonusAmount(
+    employee.overtimeType,
+    employee.overtimeValue,
+    salaryPerHour,
+    totalOverTime
+  );
+  const totalDeductionAmount = calcTotalDeductionAmount(
+    employee.deductionType,
+    employee.deductionValue,
+    salaryPerHour,
+    totalDeductionTime
+  );
 
   const netSalary = calcNetSalary(
     attendedDays,
-    officialHolidaysCount,
-    weeklyHolidays,
     salaryPerHour,
     employee.workingHoursPerDay,
     totalBonusAmount,
