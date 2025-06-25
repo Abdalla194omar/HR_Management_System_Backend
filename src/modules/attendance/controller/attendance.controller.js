@@ -6,7 +6,6 @@ import * as calc from "../../../utils/AttendanceCalc.js";
 
 // GET AND FILTER ATTENDANCE (filtering with |name, dept, from, to|)
 export const getAttendance = asyncHandler(async (req, res, next) => {
-  console.log("getAttendance");
   const { name, department, from, to, page = 1, limit = 10 } = req.query;
   const employeeQuery = [
     {
