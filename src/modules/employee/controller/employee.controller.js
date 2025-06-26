@@ -72,17 +72,23 @@ export const getAllEmployees = asyncHandler(async (req, res) => {
 
 // get all employees with filters
 export const getEmployeesFilter = asyncHandler(async (req, res, next) => {
-  const { departmentId, hireDate, page = 1, limit = 10 } = req.query;
+  const { departmentName, hireDate, page = 1, limit = 10 } = req.query;
   const query = { isDeleted: false };
 
-  if (departmentId) query.department = departmentId;
-  if (hireDate)
-    query.hireDate = {
-      $gte: new Date(`${hireDate}-01`),
-      $lte: new Date(`${hireDate}-31`),
-    };
+  if (departmentName) {
+    const dep = await Department.findOne({ departmentName: departmentName });
+    if (dep) query.department = dep._id;
+    else query.department = null;
+  }
+  if (hireDate) {
+    const start = new Date(hireDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(hireDate);
+    end.setHours(23, 59, 59, 999);
+    query.hireDate = { $gte: start, $lte: end };
+  }
 
-  const result = await paginate(Employee, query, page, limit,{ path: "department", select: "departmentName" });
+  const result = await paginate(Employee, query, page, limit, { path: "department", select: "departmentName" });
 
   if (result.data.length === 0) {
     return next(new AppError("No employees found matching the filters", 404));
@@ -90,13 +96,8 @@ export const getEmployeesFilter = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     message: "Employees with filters and pagination successfully",
-    pagination: {
-      totalEmployees,
-      totalPages,
-      page: page,
-      limit: limit,
-    },
-    employees,
+    pagination: result.pagination,
+    employees: result.data,
   });
 });
 
@@ -138,7 +139,7 @@ export const SearchEmployee = asyncHandler(async (req, res, next) => {
 
 // update
 export const updateEmployee = asyncHandler(async (req, res, next) => {
-  const { isValid, message } = await validateUniqueFields(req, req.params.id);
+  const { isValid, message } = await validateUniqueFields(req);
   if (!isValid) {
     return res.status(409).json({ error: message });
   }
