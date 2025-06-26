@@ -124,7 +124,7 @@ export const getTodayAbsence = asyncHandler(async (req, res, next) => {
   return res.status(200).json({
     data: absenceToday,
     totalDocs: absenceToday.length,
-    absencePercentage: (absenceToday.length / attendanceToday) * 100,
+    absencePercentage: Math.round((absenceToday.length / attendanceToday) * 100),
   });
 });
 
