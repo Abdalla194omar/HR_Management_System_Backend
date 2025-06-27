@@ -43,7 +43,7 @@ export const createCheckIneSchema = {
           "any.required": "Check-in time is required when status is Present",
           "string.pattern.base": "Check-in time must be in HH:MM 24-hour format",
         }),
-        otherwise: joi.optional(),
+        otherwise: joi.optional().allow("", null),
       }),
     status: joi.string().valid("Present", "Absent").default("Present").required().messages({
       "any.only": "Status must be one of Present or Absent",
@@ -79,7 +79,7 @@ export const createAttendanceSchema = {
       .when("status", {
         is: "Present",
         then: joi.required(),
-        otherwise: joi.optional(),
+        otherwise: joi.optional().allow("", null),
       })
       .messages({
         "string.pattern.base": "Check-in time must be in HH:MM 24-hour format",
@@ -91,7 +91,7 @@ export const createAttendanceSchema = {
       .when("status", {
         is: "Present",
         then: joi.required(),
-        otherwise: joi.optional(),
+        otherwise: joi.optional().allow("", null),
       })
       .messages({
         "string.pattern.base": "Check-out time must be in HH:MM 24-hour format",
@@ -106,9 +106,17 @@ export const createAttendanceSchema = {
 
 export const updateAttendanceSchema = {
   body: joi.object({
-    checkInTime: joi.string().pattern(timePattern).messages({
-      "string.pattern.base": "Check-in time must be in HH:MM 24-hour format",
-    }),
+    checkInTime: joi
+      .string()
+      .pattern(timePattern)
+      .when("status", {
+        is: "Present",
+        then: joi.required().messages({
+          "any.required": "Check-in time is required when status is Present",
+          "string.pattern.base": "Check-in time must be in HH:MM 24-hour format",
+        }),
+        otherwise: joi.optional().allow("", null),
+      }),
     checkOutTime: joi.string().pattern(timePattern).allow("", null).optional().messages({
       "string.pattern.base": "Check-out time must be in HH:MM 24-hour format",
     }),
