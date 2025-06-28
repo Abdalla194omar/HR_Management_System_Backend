@@ -28,6 +28,7 @@ const EmployeeSchema = new Schema(
     },
     phone: {
       type: String,
+      required: [true, "Phone number is required"],
       match: [/^\+?\d{10,15}$/, "Phone number must be valid"],
     },
     department: {
@@ -37,6 +38,7 @@ const EmployeeSchema = new Schema(
     },
     hireDate: {
       type: Date,
+      required: [true, "Hire date is required"],
       validate: {
         validator: function (value) {
           return value <= new Date();
@@ -47,6 +49,7 @@ const EmployeeSchema = new Schema(
     salary: {
       type: Number,
       min: [0, "Salary must be positive"],
+      required: [true, "Salary is required"],
     },
     workingHoursPerDay: {
       type: Number,
@@ -72,18 +75,22 @@ const EmployeeSchema = new Schema(
     },
     address: {
       type: String,
+      required: [true, "Address is required"],
       maxlength: [200, "Address must not exceed 200 characters"],
     },
     gender: {
       type: String,
+      required: [true, "Gender is required"],
       enum: ["Male", "Female"],
     },
     nationality: {
       type: String,
+      required: [true, "Nationality is required"],
       maxlength: [100, "Nationality must not exceed 100 characters"],
     },
     birthdate: {
       type: Date,
+      required: [true, "Birthdate is required"],
       validate: {
         validator: function (value) {
           return value < new Date();
@@ -93,6 +100,7 @@ const EmployeeSchema = new Schema(
     },
     nationalId: {
       type: String,
+      required: [true, "National ID is required"],
       unique: [true,"nationalId is unique"],
       sparse: true,
       match: [/^\d{14}$/, "National ID must be 14 digits"],
