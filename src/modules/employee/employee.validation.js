@@ -190,16 +190,13 @@ export const updateEmployeeSchema = {
 
 export const getEmployeesFilterSchema = {
   query: Joi.object({
-    departmentId: Joi.string().length(24).hex().messages({
-      "string.length": "Department ID must be 24 characters",
-      "string.hex": "Department ID must be a valid hexadecimal string",
+    departmentName: Joi.string().messages({
+      "string.base": "Department name must be a string",
     }),
-
-    hireDate: Joi.string()
-      .pattern(/^(\d{4})-(\d{2})$/)
-      .messages({
-        "string.pattern.base":
-          "Hire date must be in YYYY-MM format (e.g., 2025-06)",
-      }),
+    hireDate: Joi.date().iso().messages({
+      "date.format": "Hire date must be in YYYY-MM-DD format",
+    }),
+    page: Joi.number().min(1).optional(),
+    limit: Joi.number().min(1).optional(),
   }),
 };
