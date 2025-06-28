@@ -11,7 +11,10 @@ router.post("/",validation(schemas.createEmployeeSchema),controllers.createEmplo
 // get all
 router.get("/all", controllers.getAllEmployees);
 
-// get all by filter 
+// GET withOUT pagination
+router.get("/all/without-pagination", controllers.getAllEmployeesWithoutPagination);
+
+// get all by filter
 router.get("/", validation(schemas.getEmployeesFilterSchema),controllers.getEmployeesFilter);
 
 // total
