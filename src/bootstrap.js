@@ -28,11 +28,8 @@ const initializeApp = (app, express) => {
   app.use("/api/holidays", holidayRoutes);
   app.use("/api/payrolls", payrollRoutes);
 
-
-
   app.use(globalError);
 
- 
   app.use((req, res) => {
     res.status(404).json({
       success: false,
