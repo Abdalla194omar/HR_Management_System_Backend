@@ -70,6 +70,17 @@ export const getAllEmployees = asyncHandler(async (req, res) => {
   res.status(200).json({ message: "Get All employees successfully",  pagination: result.pagination, employees: result.data });
 });
 
+// get all employees withOUT PAgination
+export const getAllEmployeesWithoutPagination = asyncHandler(async (req, res) => {
+  
+  const employees = await Employee.find({ isDeleted: false }).populate({  path: "department", select: "departmentName" });
+  if (employees.length === 0) {
+    return res.status(404).json({ message: "No employees found" });
+  }
+  res.status(200).json({ message: "Get All employees successfully", employees });
+});
+
+ 
 // get all employees with filters
 export const getEmployeesFilter = asyncHandler(async (req, res, next) => {
   const { departmentName, hireDate, page = 1, limit = 10 } = req.query;
