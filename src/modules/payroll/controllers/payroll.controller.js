@@ -248,7 +248,9 @@ export const getAllPayrolls = asyncHandler(async (req, res, next) => {
       const deductionValue = emp.deductionValue;
       const salary = emp.salary;
       const workingHoursPerDay = emp.workingHoursPerDay;
-      const monthDays = calcMonthDays(month, year);
+      // const monthDays = calcMonthDays(month, year);
+      const monthDays = 30;
+
       if (monthDays === 0 || emp.workingHoursPerDay === 0 || emp.salary === 0) {
         return next(
           new AppError(
@@ -427,7 +429,8 @@ export const getPayrollByEmployee = asyncHandler(async (req, res, next) => {
     const deductionValue = emp.deductionValue;
     const salary = emp.salary;
     const workingHoursPerDay = emp.workingHoursPerDay;
-    const monthDays = calcMonthDays(month, year);
+    // const monthDays = calcMonthDays(month, year);
+    const monthDays = 30;
 
     if (monthDays === 0 || workingHoursPerDay === 0 || salary === 0) {
       return next(
