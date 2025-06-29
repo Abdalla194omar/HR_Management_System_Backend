@@ -6,13 +6,13 @@ import Department from "../../../../DB/model/Department.js";
 // function validate unique field (email,NationalId)
 async function validateUniqueFields(req) {
   const { email, nationalId } = req.body;
-
+const employeeId = req.params.id;
   const existingEmail = await Employee.findOne({ email });
-  if (existingEmail) {
+  if (existingEmail && existingEmail._id.toString() !== employeeId) {
     return { isValid: false, message: "Email already exist" };
   }
   const existingNationalId = await Employee.findOne({ nationalId });
-  if (existingNationalId) {
+  if (existingNationalId && existingNationalId._id.toString() !== employeeId) {
     return { isValid: false, message: "National ID already exist" };
   }
   return { isValid: true, message: "" };
