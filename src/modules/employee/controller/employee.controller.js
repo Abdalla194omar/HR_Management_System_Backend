@@ -6,13 +6,13 @@ import Department from "../../../../DB/model/Department.js";
 // function validate unique field (email,NationalId)
 async function validateUniqueFields(req) {
   const { email, nationalId } = req.body;
-
+  const employeeId = req.params.id;
   const existingEmail = await Employee.findOne({ email });
-  if (existingEmail) {
+  if (existingEmail && existingEmail._id.toString() !== employeeId) {
     return { isValid: false, message: "Email already exist" };
   }
   const existingNationalId = await Employee.findOne({ nationalId });
-  if (existingNationalId) {
+  if (existingNationalId && existingNationalId._id.toString() !== employeeId) {
     return { isValid: false, message: "National ID already exist" };
   }
   return { isValid: true, message: "" };
@@ -72,28 +72,29 @@ export const getAllEmployees = asyncHandler(async (req, res) => {
     select: "departmentName",
   });
 
-  console.log(result.data);
-
-  res
-    .status(200)
-    .json({
-      message: "Get All employees successfully",
-      pagination: result.pagination,
-      employees: result.data,
-    });
+  res.status(200).json({
+    message: "Get All employees successfully",
+    pagination: result.pagination,
+    employees: result.data,
+  });
 });
 
 // get all employees withOUT PAgination
-export const getAllEmployeesWithoutPagination = asyncHandler(async (req, res) => {
-  
-  const employees = await Employee.find({ isDeleted: false }).populate({  path: "department", select: "departmentName" });
-  if (employees.length === 0) {
-    return res.status(404).json({ message: "No employees found" });
+export const getAllEmployeesWithoutPagination = asyncHandler(
+  async (req, res) => {
+    const employees = await Employee.find({ isDeleted: false }).populate({
+      path: "department",
+      select: "departmentName",
+    });
+    if (employees.length === 0) {
+      return res.status(404).json({ message: "No employees found" });
+    }
+    res
+      .status(200)
+      .json({ message: "Get All employees successfully", employees });
   }
-  res.status(200).json({ message: "Get All employees successfully", employees });
-});
+);
 
- 
 // get all employees with filters
 export const getEmployeesFilter = asyncHandler(async (req, res, next) => {
   const { departmentName, hireDate, page = 1, limit = 10 } = req.query;
@@ -112,7 +113,10 @@ export const getEmployeesFilter = asyncHandler(async (req, res, next) => {
     query.hireDate = { $gte: start, $lte: end };
   }
 
-  const result = await paginate(Employee, query, page, limit, { path: "department", select: "departmentName" });
+  const result = await paginate(Employee, query, page, limit, {
+    path: "department",
+    select: "departmentName",
+  });
 
   if (result.data.length === 0) {
     return next(new AppError("No employees found matching the filters", 404));
@@ -161,13 +165,11 @@ export const SearchEmployee = asyncHandler(async (req, res, next) => {
     select: "departmentName",
   });
 
-  res
-    .status(201)
-    .json({
-      message: "Search results with pagination",
-      pagination: result.pagination,
-      employees: result.data,
-    });
+  res.status(201).json({
+    message: "Search results with pagination",
+    pagination: result.pagination,
+    employees: result.data,
+  });
 });
 
 // update
