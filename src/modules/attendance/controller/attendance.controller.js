@@ -32,11 +32,7 @@ export const getAttendance = asyncHandler(async (req, res, next) => {
         $expr: {
           $regexMatch: {
             input: {
-              $concat: [
-                "$employeeData.firstName",
-                " ",
-                "$employeeData.lastName",
-              ],
+              $concat: ["$employeeData.firstName", " ", "$employeeData.lastName"],
             },
             regex: new RegExp(name, "i"),
           },
@@ -68,13 +64,23 @@ export const getAttendance = asyncHandler(async (req, res, next) => {
   }
 
   if (from && to) {
-    if (new Date(from) > new Date(to))
-      return next(new AppError("'from' date can't be after 'to' date", 400));
+    const fromUtcDate = new Date(from);
+    const toUtcDate = new Date(to);
+    fromUtcDate.setUTCHours(0, 0, 0, 0);
+    toUtcDate.setUTCHours(0, 0, 0, 0);
+    if (fromUtcDate > toUtcDate) return next(new AppError("'from' date can't be after 'to' date", 400));
   }
-  if (from) dateFilter.$gte = new Date(from);
-  if (to) dateFilter.$lte = new Date(to);
-  if (Object.keys(dateFilter).length > 0)
-    query.push({ $match: { date: dateFilter } });
+  if (from) {
+    const fromUtcDate = new Date(from);
+    fromUtcDate.setUTCHours(0, 0, 0, 0);
+    dateFilter.$gte = fromUtcDate;
+  }
+  if (to) {
+    const toUtcDate = new Date(to);
+    toUtcDate.setUTCHours(0, 0, 0, 0);
+    dateFilter.$lte = toUtcDate;
+  }
+  if (Object.keys(dateFilter).length > 0) query.push({ $match: { date: dateFilter } });
 
   const countQuery = [...query];
   countQuery.push({ $count: "total" });
@@ -92,10 +98,7 @@ export const getAttendance = asyncHandler(async (req, res, next) => {
     { $limit: limitNum }
   );
 
-  const attendanceIds = await Attendance.aggregate([
-    ...query,
-    { $project: { _id: 1 } },
-  ]);
+  const attendanceIds = await Attendance.aggregate([...query, { $project: { _id: 1 } }]);
   attendances = await Attendance.find({ _id: { $in: attendanceIds } })
     .sort({ date: -1 })
     .populate({
@@ -117,12 +120,12 @@ export const getAttendance = asyncHandler(async (req, res, next) => {
 // Get Today's Absence
 export const getTodayAbsence = asyncHandler(async (req, res, next) => {
   const todayDate = new Date();
-  todayDate.setHours(0, 0, 0, 0);
-  const tomorrowDate = new Date();
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const todayUtcDate = new Date(Date.UTC(todayDate.getUTCFullYear(), todayDate.getUTCMonth(), todayDate.getUTCDate()));
+  const tomorrowUtcDate = new Date(todayUtcDate);
+  tomorrowUtcDate.setUTCDate(tomorrowUtcDate.getUTCDate() + 1);
   const absenceToday = await Attendance.find({
     status: "Absent",
-    date: { $gt: todayDate, $lt: tomorrowDate },
+    date: { $gt: todayUtcDate, $lt: tomorrowUtcDate },
   }).populate({
     path: "employee",
     select: "firstName lastName",
@@ -132,7 +135,7 @@ export const getTodayAbsence = asyncHandler(async (req, res, next) => {
     },
   });
   const attendanceToday = await Attendance.countDocuments({
-    date: { $gt: todayDate, $lt: tomorrowDate },
+    date: { $gt: todayUtcDate, $lt: tomorrowUtcDate },
   }).populate({
     path: "employee",
     select: "firstName lastName",
@@ -156,8 +159,9 @@ export const getAttendanceGraph = asyncHandler(async (req, res, next) => {
     select: "firstName lastName",
     populate: { path: "department", select: "departmentName" },
   };
-  const targetMonth = new Date().getMonth() + 1;
-  const targetYear = new Date().getFullYear();
+  const now = new Date();
+  const targetMonth = now.getUTCMonth() + 1;
+  const targetYear = now.getUTCFullYear();
 
   function tQuery(from, to) {
     return {
@@ -208,44 +212,28 @@ export const getAttendanceGraph = asyncHandler(async (req, res, next) => {
     presentT2Attendance,
     allT3Attendance,
     presentT3Attendance,
-    presentT1Percent: ((presentT1Attendance / allT1Attendance) * 100).toFixed(
-      1
-    ),
-    presentT2Percent: ((presentT2Attendance / allT2Attendance) * 100).toFixed(
-      1
-    ),
-    presentT3Percent: ((presentT3Attendance / allT3Attendance) * 100).toFixed(
-      1
-    ),
+    presentT1Percent: allT1Attendance === 0 ? 0 : ((presentT1Attendance / allT1Attendance) * 100).toFixed(1),
+    presentT2Percent: allT2Attendance === 0 ? 0 : ((presentT2Attendance / allT2Attendance) * 100).toFixed(1),
+    presentT3Percent: allT3Attendance === 0 ? 0 : ((presentT3Attendance / allT3Attendance) * 100).toFixed(1),
   });
 });
 
 // CREATE CHECKIN
 export const createCheckIn = asyncHandler(async (req, res, next) => {
   const { employee, date, checkInTime, status } = req.body;
-  const attendanceFound = await Attendance.findOne({ date, employee });
-  if (attendanceFound)
-    return next(
-      new AppError("This Attendance is already found for this date", 409)
-    );
+  const utcDate = new Date(date);
+  utcDate.setUTCHours(0, 0, 0, 0);
+  const attendanceFound = await Attendance.findOne({ date: utcDate, employee });
+  if (attendanceFound) return next(new AppError("This Attendance is already found for this date", 409));
   const employeeFound = await Employee.findById(employee);
   if (!employeeFound) return next(new AppError("Employee not found", 404));
-  if (new Date(date) < new Date(employeeFound.hireDate))
-    return next(
-      new AppError(
-        "Can't create attendance date before employee hire date",
-        400
-      )
-    );
+  if (new Date(date) < new Date(employeeFound.hireDate)) return next(new AppError("Can't create attendance date before employee hire date", 400));
   await calc.checkForHolidays(date, employeeFound);
-  const checkInData = { employee, date, status };
+  const checkInData = { employee, date: utcDate, status };
   if (status === "Present") {
     Object.assign(checkInData, {
       checkInTime,
-      lateDurationInHours: calc.calcLateDurationInHours(
-        checkInTime,
-        employeeFound
-      ),
+      lateDurationInHours: calc.calcLateDurationInHours(checkInTime, employeeFound),
     });
   }
   const newCheckIn = await Attendance.create(checkInData);
@@ -259,18 +247,11 @@ export const createCheckIn = asyncHandler(async (req, res, next) => {
 export const createCheckOut = asyncHandler(async (req, res, next) => {
   const { checkOutTime } = req.body;
   const { id } = req.params;
-  const attendanceFound = await Attendance.findById(id).populate(
-    "employee",
-    "defaultCheckInTime defaultCheckOutTime"
-  );
-  if (!attendanceFound.checkInTime)
-    return next(new AppError("You must provide checkIn time first", 400));
+  const attendanceFound = await Attendance.findById(id).populate("employee", "defaultCheckInTime defaultCheckOutTime");
+  if (!attendanceFound.checkInTime) return next(new AppError("You must provide checkIn time first", 400));
   calc.checkOutAfterCheckIn(attendanceFound.checkInTime, checkOutTime);
   attendanceFound.checkOutTime = checkOutTime;
-  attendanceFound.overtimeDurationInHours = calc.calcOvertimeDurationInHours(
-    checkOutTime,
-    attendanceFound.employee
-  );
+  attendanceFound.overtimeDurationInHours = calc.calcOvertimeDurationInHours(checkOutTime, attendanceFound.employee);
   await attendanceFound.save();
   return res.status(201).json({
     message: "checkOut added successfully",
@@ -281,32 +262,31 @@ export const createCheckOut = asyncHandler(async (req, res, next) => {
 // CREATE ATTENDANCE
 export const createAttendance = asyncHandler(async (req, res, next) => {
   const { employee, date, checkInTime, checkOutTime, status } = req.body;
+  const utcDate = new Date(date);
+  utcDate.setUTCHours(0, 0, 0, 0);
 
   // check for attendance if it's exist in database already
-  const attendanceFound = await Attendance.findOne({ date, employee });
-  console.log(date);
-  if (attendanceFound)
-    return next(
-      new AppError("This Attendance is already found for this date", 409)
-    );
+  const attendanceFound = await Attendance.findOne({ date: utcDate, employee });
+  if (attendanceFound) return next(new AppError("This Attendance is already found for this date", 409));
 
   // check for employee and hireDate and get default checkIn and checkOut of employee
   const employeeFound = await Employee.findById(employee);
   if (!employeeFound) return next(new AppError("Employee not found", 404));
-  if (new Date(date) < new Date(employeeFound.hireDate))
-    return next(
-      new AppError(
-        "Can't create attendance date before employee hire date",
-        400
-      )
-    );
+
+  const attendanceUtcDate = new Date(date);
+  attendanceUtcDate.setUTCHours(0, 0, 0, 0);
+
+  const hireUtcDate = new Date(employeeFound.hireDate);
+  hireUtcDate.setUTCHours(0, 0, 0, 0);
+
+  if (attendanceUtcDate < hireUtcDate) return next(new AppError("Can't create attendance date before employee hire date", 400));
 
   // check for holidays
   await calc.checkForHolidays(date, employeeFound);
 
   const attendanceData = {
     employee,
-    date,
+    date: utcDate,
     status,
   };
 
@@ -320,14 +300,8 @@ export const createAttendance = asyncHandler(async (req, res, next) => {
     Object.assign(attendanceData, {
       checkInTime,
       checkOutTime,
-      lateDurationInHours: calc.calcLateDurationInHours(
-        checkInTime,
-        employeeFound
-      ),
-      overtimeDurationInHours: calc.calcOvertimeDurationInHours(
-        checkOutTime,
-        employeeFound
-      ),
+      lateDurationInHours: calc.calcLateDurationInHours(checkInTime, employeeFound),
+      overtimeDurationInHours: calc.calcOvertimeDurationInHours(checkOutTime, employeeFound),
     });
   }
 
@@ -345,25 +319,16 @@ export const createAttendance = asyncHandler(async (req, res, next) => {
 export const updateAttendance = asyncHandler(async (req, res, next) => {
   const { checkInTime, checkOutTime, status } = req.body;
   const { id } = req.params;
-  const attendance = await Attendance.findById(id).populate(
-    "employee",
-    "defaultCheckInTime defaultCheckOutTime"
-  );
+  const attendance = await Attendance.findById(id).populate("employee", "defaultCheckInTime defaultCheckOutTime");
   if (status === "Present") {
     if (checkInTime) {
       attendance.checkInTime = checkInTime;
-      attendance.lateDurationInHours = calc.calcLateDurationInHours(
-        checkInTime,
-        attendance.employee
-      );
+      attendance.lateDurationInHours = calc.calcLateDurationInHours(checkInTime, attendance.employee);
     }
     if (checkOutTime) {
       calc.checkOutAfterCheckIn(checkInTime, checkOutTime);
       attendance.checkOutTime = checkOutTime;
-      attendance.overtimeDurationInHours = calc.calcOvertimeDurationInHours(
-        checkOutTime,
-        attendance.employee
-      );
+      attendance.overtimeDurationInHours = calc.calcOvertimeDurationInHours(checkOutTime, attendance.employee);
     }
     if (checkOutTime === "") {
       attendance.checkOutTime = undefined;
