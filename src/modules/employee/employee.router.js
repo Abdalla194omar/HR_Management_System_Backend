@@ -28,7 +28,7 @@ router.get("/search", controllers.SearchEmployee);
 router.get("/:id", controllers.getEmployeeByid);
 
 // update
-router.put("/:id",validation(schemas.updateEmployeeSchema), controllers.updateEmployee);
+router.patch("/:id",validation(schemas.updateEmployeeSchema), controllers.updateEmployee);
 
 // delete
 router.delete("/:id", controllers.deleteEmployee);
