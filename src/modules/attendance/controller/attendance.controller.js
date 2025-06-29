@@ -123,42 +123,32 @@ export const getTodayAbsence = asyncHandler(async (req, res, next) => {
   const todayUtcDate = new Date(Date.UTC(todayDate.getUTCFullYear(), todayDate.getUTCMonth(), todayDate.getUTCDate()));
   const tomorrowUtcDate = new Date(todayUtcDate);
   tomorrowUtcDate.setUTCDate(tomorrowUtcDate.getUTCDate() + 1);
-  const absenceToday = await Attendance.find({
-    status: "Absent",
-    date: { $gt: todayUtcDate, $lt: tomorrowUtcDate },
-  }).populate({
-    path: "employee",
-    select: "firstName lastName",
-    populate: {
-      path: "department",
-      select: "departmentName",
-    },
-  });
-  const attendanceToday = await Attendance.countDocuments({
-    date: { $gt: todayUtcDate, $lt: tomorrowUtcDate },
-  }).populate({
-    path: "employee",
-    select: "firstName lastName",
-    populate: {
-      path: "department",
-      select: "departmentName",
-    },
-  });
+  const [absenceToday, attendanceToday] = await Promise.all([
+    Attendance.find({
+      status: "Absent",
+      date: { $gt: todayUtcDate, $lt: tomorrowUtcDate },
+    }).populate({
+      path: "employee",
+      select: "firstName lastName",
+      populate: {
+        path: "department",
+        select: "departmentName",
+      },
+    }),
+    Attendance.countDocuments({
+      date: { $gt: todayUtcDate, $lt: tomorrowUtcDate },
+    }),
+  ]);
   return res.status(200).json({
     data: absenceToday,
     totalDocs: absenceToday.length,
-    absencePercentage: Math.round((absenceToday.length / attendanceToday) * 100),
+    absencePercentage: attendanceToday === 0 ? 0 : Math.round((absenceToday.length / attendanceToday) * 100),
   });
 });
 
 // Get Attendance Graph
 export const getAttendanceGraph = asyncHandler(async (req, res, next) => {
   const [t1From, t1To, t2From, t2To, t3From, t3To] = [1, 10, 11, 20, 21, 31];
-  const populateQuery = {
-    path: "employee",
-    select: "firstName lastName",
-    populate: { path: "department", select: "departmentName" },
-  };
   const now = new Date();
   const targetMonth = now.getUTCMonth() + 1;
   const targetYear = now.getUTCFullYear();
@@ -176,33 +166,14 @@ export const getAttendanceGraph = asyncHandler(async (req, res, next) => {
     };
   }
 
-  const allT1Attendance = await Attendance.countDocuments({
-    isDeleted: false,
-    ...tQuery(t1From, t1To),
-  });
-  const presentT1Attendance = await Attendance.countDocuments({
-    isDeleted: false,
-    status: "Present",
-    ...tQuery(t1From, t1To),
-  });
-  const allT2Attendance = await Attendance.countDocuments({
-    isDeleted: false,
-    ...tQuery(t2From, t2To),
-  });
-  const presentT2Attendance = await Attendance.countDocuments({
-    isDeleted: false,
-    status: "Present",
-    ...tQuery(t2From, t2To),
-  });
-  const allT3Attendance = await Attendance.countDocuments({
-    isDeleted: false,
-    ...tQuery(t3From, t3To),
-  });
-  const presentT3Attendance = await Attendance.countDocuments({
-    isDeleted: false,
-    status: "Present",
-    ...tQuery(t3From, t3To),
-  });
+  const [allT1Attendance, presentT1Attendance, allT2Attendance, presentT2Attendance, allT3Attendance, presentT3Attendance] = await Promise.all([
+    Attendance.countDocuments({ isDeleted: false, ...tQuery(t1From, t1To) }),
+    Attendance.countDocuments({ isDeleted: false, status: "Present", ...tQuery(t1From, t1To) }),
+    Attendance.countDocuments({ isDeleted: false, ...tQuery(t2From, t2To) }),
+    Attendance.countDocuments({ isDeleted: false, status: "Present", ...tQuery(t2From, t2To) }),
+    Attendance.countDocuments({ isDeleted: false, ...tQuery(t3From, t3To) }),
+    Attendance.countDocuments({ isDeleted: false, status: "Present", ...tQuery(t3From, t3To) }),
+  ]);
 
   return res.status(200).json({
     targetMonth,
@@ -262,19 +233,17 @@ export const createCheckOut = asyncHandler(async (req, res, next) => {
 // CREATE ATTENDANCE
 export const createAttendance = asyncHandler(async (req, res, next) => {
   const { employee, date, checkInTime, checkOutTime, status } = req.body;
-  const utcDate = new Date(date);
-  utcDate.setUTCHours(0, 0, 0, 0);
+  const attendanceUtcDate = new Date(date);
+  attendanceUtcDate.setUTCHours(0, 0, 0, 0);
 
   // check for attendance if it's exist in database already
-  const attendanceFound = await Attendance.findOne({ date: utcDate, employee });
+  const attendanceFound = await Attendance.findOne({ date: attendanceUtcDate, employee });
   if (attendanceFound) return next(new AppError("This Attendance is already found for this date", 409));
 
   // check for employee and hireDate and get default checkIn and checkOut of employee
   const employeeFound = await Employee.findById(employee);
   if (!employeeFound) return next(new AppError("Employee not found", 404));
 
-  const attendanceUtcDate = new Date(date);
-  attendanceUtcDate.setUTCHours(0, 0, 0, 0);
 
   const hireUtcDate = new Date(employeeFound.hireDate);
   hireUtcDate.setUTCHours(0, 0, 0, 0);
@@ -286,7 +255,7 @@ export const createAttendance = asyncHandler(async (req, res, next) => {
 
   const attendanceData = {
     employee,
-    date: utcDate,
+    date: attendanceUtcDate,
     status,
   };
 
