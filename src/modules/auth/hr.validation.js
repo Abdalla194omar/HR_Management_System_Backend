@@ -35,6 +35,8 @@ const validateHR = (schema) => {
 
 
 
+
+
 const loginSchema = {
   body: Joi.object({
     email: Joi.string()
@@ -54,6 +56,35 @@ const loginSchema = {
   }),
 };
 
-
+const registerSchema = {
+  body: Joi.object({
+    name: Joi.string()
+      .required()
+      .min(2)
+      .max(100)
+      .messages({
+        "any.required": "Name is required",
+        "string.min": "Name must be at least 2 characters",
+        "string.max": "Name must be at most 100 characters",
+      }),
+    email: Joi.string()
+      .required()
+      .email()
+      .messages({
+        "string.email": "Email format is invalid",
+        "any.required": "Email is required",
+      }),
+    password: Joi.string()
+      .required()
+      .min(8)
+      .messages({
+        "any.required": "Password is required",
+        "string.min": "Password must be at least 8 characters",
+      }),
+  }),
+};
 export default validateHR; 
-export { loginSchema };
+export { loginSchema, registerSchema };
+
+
+
