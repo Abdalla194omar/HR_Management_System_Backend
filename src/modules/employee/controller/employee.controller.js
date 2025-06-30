@@ -2,6 +2,7 @@ import Employee from "../../../../DB/model/Employee.js";
 import asyncHandler from "../../../utils/asyncHandeler.js";
 import AppError from "../../../utils/AppError.js";
 import Department from "../../../../DB/model/Department.js";
+import Attendance  from "../../../../DB/model/Attendence.js"
 
 // function validate unique field (email,NationalId)
 async function validateUniqueFields(req) {
@@ -125,7 +126,7 @@ export const getEmployeesFilter = asyncHandler(async (req, res, next) => {
   });
 });
 
-// get employee by id (✅ fixed)
+// get employee by id 
 export const getEmployeeByid = asyncHandler(async (req, res, next) => {
   const employee = await Employee.findOne({
     _id: req.params.id,
@@ -194,8 +195,18 @@ export const deleteEmployee = asyncHandler(async (req, res, next) => {
     { isDeleted: true },
     { new: true }
   );
-
+ 
   if (!employee) return next(new AppError("Error employee not found", 400));
 
+  console.log("Deleting attendances for employee:", employee._id);
+
+  const result = await Attendance.updateMany(
+    { employee: employee._id },
+    {
+      isDeleted: true,
+      deletedAt: new Date()
+    }
+  );
+  console.log("Attendance update result:", result);
   res.status(201).json({ message: "Employee Deleted Successfully" });
 });
