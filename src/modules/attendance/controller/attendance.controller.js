@@ -126,7 +126,7 @@ export const getTodayAbsence = asyncHandler(async (req, res, next) => {
   const [absenceToday, attendanceToday] = await Promise.all([
     Attendance.find({
       status: "Absent",
-      date: { $gt: todayUtcDate, $lt: tomorrowUtcDate },
+      date: { $gte: todayUtcDate, $lt: tomorrowUtcDate },
     }).populate({
       path: "employee",
       select: "firstName lastName",
@@ -136,7 +136,7 @@ export const getTodayAbsence = asyncHandler(async (req, res, next) => {
       },
     }),
     Attendance.countDocuments({
-      date: { $gt: todayUtcDate, $lt: tomorrowUtcDate },
+      date: { $gte: todayUtcDate, $lt: tomorrowUtcDate },
     }),
   ]);
   return res.status(200).json({
