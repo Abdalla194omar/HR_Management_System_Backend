@@ -6,6 +6,7 @@ import departmentRoutes from "./modules/department/department.router.js";
 import employeeRoutes from "./modules/employee/employee.router.js";
 import holidayRoutes from "./modules/holiday/holiday.router.js";
 import payrollRoutes from "./modules/payroll/payroll.router.js";
+import chatbotRouter from "./modules/chatbot/chatbot.router.js";
 
 import { router as attendanceRoutes } from "./modules/attendance/attendance.router.js";
 import authRoutes from "./modules/auth/hr.router.js";
@@ -27,6 +28,7 @@ const initializeApp = (app, express) => {
 
   app.use("/api/holidays", holidayRoutes);
   app.use("/api/payrolls", payrollRoutes);
+  app.use("/api/chatbot", chatbotRouter);
 
   app.use(globalError);
 
