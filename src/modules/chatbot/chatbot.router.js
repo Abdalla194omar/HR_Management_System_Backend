@@ -4,6 +4,6 @@ import validation from "../../middleWare/validation.js";
 import { chatSchema } from "./chatbot.validation.js";
 const router = Router();
 
-router.get("/chat", validation(chatSchema), processChat);
+router.post("/chat", processChat);
 
 export default router;
