@@ -21,6 +21,16 @@ export const processChat = asyncHandler(async (req, res) => {
     return res.json({ reply });
   }
 
+  // الأقسام الموجودة في الشركة
+  if ((language === "ar" && msg.includes("الأقسام في الشركة")) || (language === "en" && msg.includes("What are the departments"))) {
+    const departments = await Department.find({ isDeleted: false });
+const reply =
+  language === "ar"
+    ? `الأقسام الموجودة في الشركة هي:\n${departments.map((depart) => `• ${depart.departmentName}`).join("\n")}`
+    : `The departments in the company are:\n${departments.map((depart) => `• ${depart.departmentName}`).join("\n")}`;
+    return res.json({ reply });
+  }
+
   // الغياب اليومي
   if ((language === "ar" && msg.includes("غياب النهارده")) || (language === "en" && msg.includes("absent today"))) {
     const todayDate = new Date();
