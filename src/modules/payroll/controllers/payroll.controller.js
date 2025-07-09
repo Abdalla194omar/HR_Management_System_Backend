@@ -50,7 +50,12 @@ export const getAllPayrolls = asyncHandler(async (req, res, next) => {
   const employees = await Employee.find({
     _id: { $in: employeesWithAttendance },
     isDeleted: { $ne: true },
-  });
+  })
+    .populate("department")
+    .then((results) =>
+      results.filter((emp) => emp.department && emp.department.deleted !== true)
+    );
+
   let empPayroll = [];
 
   for (const emp of employees) {
@@ -166,13 +171,17 @@ export const getPayrollByEmployee = asyncHandler(async (req, res, next) => {
     }).populate("employee"),
   ]);
 
-  const emp = await Employee.findOne({
-    _id: employeeId,
+  const employees = await Employee.find({
+    _id: { $in: employeesWithAttendance },
     isDeleted: { $ne: true },
-  }).populate("department");
+  })
+    .populate("department")
+    .then((result) => result.filter((emp) => !emp.department?.deleted));
 
-  if (!emp) {
-    return next(new AppError("Employee not found", 404));
+  if (!emp || emp.department?.deleted) {
+    return next(
+      new AppError("Employee not found or department is deleted", 404)
+    );
   }
 
   if (!monthAttendance.length) {
