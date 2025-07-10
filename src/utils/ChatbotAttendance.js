@@ -1,7 +1,6 @@
 import Attendance from "../../DB/model/Attendence.js";
 import Employee from "../../DB/model/Employee.js";
 
-// الموظف المميز لهذا الشهر
 export async function topEmployeesFunc(language) {
   console.log("topEmployeesFunc");
   const date = new Date();
@@ -45,6 +44,7 @@ export async function topEmployeesFunc(language) {
     const noTopEmployeesReply = language === "ar" ? "لا يوجد موظفين مميزين لهذا الشهر" : "There are no top employees for this month";
     return { reply: noTopEmployeesReply };
   }
+  console.log(topEmployees);
   const topEmployeesReply =
     language === "ar"
       ? `الموظفين المميزين لهذا الشهر هم:\n ${topEmployees.map((emp) => `• ${emp.employeeData.firstName} ${emp.employeeData.lastName}`).join("\n")}`
@@ -52,7 +52,6 @@ export async function topEmployeesFunc(language) {
   return { reply: topEmployeesReply };
 }
 
-// الموظفين المتجاوزين لساعات التأخير المسموحة في الشهر
 export async function lateEmployeesFunc(language) {
   console.log("lateEmployeesFunc");
   const date = new Date();
@@ -98,6 +97,7 @@ export async function lateEmployeesFunc(language) {
         : "There are no employees who exceeded the allowed lateness hours this month";
     return { reply: noLateEmployeesReply };
   }
+  console.log(lateEmployees);
   const lateEmployeesReply =
     language === "ar"
       ? `الموظفين المتجاوزين لساعات التأخير المسموحة لهذا الشهر هم: \n ${lateEmployees
@@ -109,7 +109,6 @@ export async function lateEmployeesFunc(language) {
   return { reply: lateEmployeesReply };
 }
 
-// تقرير الحضور لهذا الشهر
 export async function attendanceReportFunc(language) {
   console.log("AttendanceReportFunc");
   const date = new Date();
@@ -172,14 +171,14 @@ export async function attendanceReportFunc(language) {
   );
   const reply =
     language === "ar"
-      ? `<strong>تقرير الحضور لشهر ${monthName}</strong>\n
+      ? `<strong>تقرير الحضور لشهر ${monthName}-${targetYear}</strong>\n
 👥 عدد الموظفين: ${totalEmp} موظف\n
 ✅ نسبة الحضور: ${allAttendance === 0 ? 0 : ((presentAttendance / allAttendance) * 100).toFixed(2)}%\n
 ❌ نسبة الغياب: ${allAttendance === 0 ? 0 : ((absentAttendance / allAttendance) * 100).toFixed(2)}%\n
 ⚠️ نسبة التأخير: ${presentAttendance === 0 ? 0 : ((lateAttendance / presentAttendance) * 100).toFixed(2)}%\n
 🕒❗ متوسط عدد ساعات التأخير: ${lateAvg.toFixed(2)} ساعة\n
 🕒➕ متوسط عدد الساعات الإضافية: ${overAvg.toFixed(2)} ساعة\n`
-      : `<strong>Attendance Report for ${monthName}</strong>\n
+      : `<strong>Attendance Report for ${monthName}-${targetYear}</strong>\n
 👥 Total Employees: ${totalEmp}\n
 ✅ Attendance Rate: ${allAttendance === 0 ? 0 : ((presentAttendance / allAttendance) * 100).toFixed(2)}%\n
 ❌ Absence Rate: ${allAttendance === 0 ? 0 : ((absentAttendance / allAttendance) * 100).toFixed(2)}%\n
