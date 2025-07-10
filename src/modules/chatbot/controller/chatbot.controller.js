@@ -2,8 +2,11 @@ import Employee from "../../../../DB/model/Employee.js";
 import asyncHandler from "../../../utils/asyncHandeler.js";
 import Attendance from "../../../../DB/model/Attendence.js";
 import Department from "../../../../DB/model/Department.js";
+import { attendanceReportFunc, lateEmployeesFunc, topEmployeesFunc } from "../../../utils/ChatbotAttendance.js";
 
 export const processChat = asyncHandler(async (req, res) => {
+  console.log("chat controller");
+  console.log(req.body)
   const { message, language } = req.body;
   const msg = message.toLowerCase().trim();
 
@@ -29,6 +32,24 @@ export const processChat = asyncHandler(async (req, res) => {
         ? `الأقسام الموجودة في الشركة هي:\n${departments.map((depart) => `• ${depart.departmentName}`).join("\n")}`
         : `The departments in the company are:\n${departments.map((depart) => `• ${depart.departmentName}`).join("\n")}`;
     return res.json({ reply });
+  }
+
+  // الموظف المميز لهذا الشهر
+  if ((language === "ar" && msg.includes("الموظفين المميزين")) || (language === "en" && msg.includes("top employees"))) {
+    const reply = await topEmployeesFunc(language);
+    return res.json(reply);
+  }
+
+  // الموظفين المتجاوزين لساعات التأخير المسموحة في الشهر
+  if ((language === "ar" && msg.includes("الموظفين المتجاوزين")) || (language === "en" && msg.includes("employees exceeded the allowed lateness"))) {
+    const reply = await lateEmployeesFunc(language);
+    return res.json(reply);
+  }
+
+  // تقرير الحضور لهذا الشهر
+  if ((language === "ar" && msg.includes("تقرير الحضور والغياب")) || (language === "en" && msg.includes("attendance report"))) {
+    const reply = await attendanceReportFunc(language);
+    return res.json(reply);
   }
 
   // الغياب اليومي
