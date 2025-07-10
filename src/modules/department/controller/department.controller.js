@@ -2,6 +2,8 @@ import Department from "../../../../DB/model/Department.js";
 import asyncHandler from "../../../utils/asyncHandeler.js";
 import AppError from "../../../utils/AppError.js";
 import Employee from "../../../../DB/model/Employee.js";
+import Attendance from "../../../../DB/model/Attendence.js";
+
 // ✅ Create department
 export const createDepartment = asyncHandler(async (req, res, next) => {
   const { departmentName } = req.body;
@@ -62,7 +64,25 @@ export const updateDepartment = asyncHandler(async (req, res, next) => {
   });
 });
 
-//  Delete department
+// //  Delete department
+// export const deleteDepartment = asyncHandler(async (req, res) => {
+//   const { id } = req.params;
+
+//   const department = await Department.findById(id);
+//   if (!department) {
+//     return res.status(404).json({ message: "Department not found" });
+//   }
+
+//   // حذف كل الموظفين اللي ليهم نفس الـ department
+//   await Employee.deleteMany({ department: id });
+
+//   // حذف القسم نفسه
+//   await department.deleteOne();
+
+//   res.status(200).json({ message: "Department and related employees deleted" });
+// });
+
+// Delete department
 export const deleteDepartment = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -71,56 +91,23 @@ export const deleteDepartment = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "Department not found" });
   }
 
-  // حذف كل الموظفين اللي ليهم نفس الـ department
+  // جيب كل الموظفين اللي في القسم
+  const employeesInDepartment = await Employee.find({ department: id });
+
+  // استخرج الـ IDs بتاعتهم
+  const employeeIds = employeesInDepartment.map((emp) => emp._id);
+
+  // احذف الـ attendance الخاص بيهم
+  await Attendance.deleteMany({ employee: { $in: employeeIds } });
+
+  // احذف الموظفين
   await Employee.deleteMany({ department: id });
 
-  // حذف القسم نفسه
+  // احذف القسم نفسه
   await department.deleteOne();
 
-  res.status(200).json({ message: "Department and related employees deleted" });
+  res.status(200).json({ message: "Department, employees, and attendance records deleted" });
 });
 
 
 
-
-
-
-// export const deleteDepartment = asyncHandler(async (req, res, next) => {
-//   const { id } = req.params;
-
-//   const department = await Department.findOne({ _id: id, isDeleted: false });
-//   if (!department) {
-//     return next(new AppError("Department not found", 404));
-//   }
-
-//   // Soft delete للموظفين المرتبطين بالقسم
-//   await Employee.updateMany(
-//     { department: id },
-//     {
-//       isDeleted: true,
-//       deletedAt: new Date(),
-//     }
-//   );
-
-//   // Soft delete للقسم 
-//   await Department.findByIdAndUpdate(id, {
-//     isDeleted: true,
-//     deletedAt: new Date(),
-//   });
-
-//   return res.status(200).json({
-//     message: "Department and its employees marked as deleted",
-//   });
-// });
-
-
-// export const deleteDepartment = asyncHandler(async (req, res, next) => {
-//   const { id } = req.params;
-
-//   const department = await Department.findByIdAndDelete(id);
-//   if (!department) {
-//     return next(new AppError("Department not found", 404));
-//   }
-
-//   res.status(200).json({ message: "Department deleted successfully" });
-// });
