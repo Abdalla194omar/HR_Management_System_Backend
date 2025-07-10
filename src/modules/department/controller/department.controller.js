@@ -1,7 +1,7 @@
 import Department from "../../../../DB/model/Department.js";
 import asyncHandler from "../../../utils/asyncHandeler.js";
 import AppError from "../../../utils/AppError.js";
-
+import Employee from "../../../../DB/model/Employee.js";
 // ✅ Create department
 export const createDepartment = asyncHandler(async (req, res, next) => {
   const { departmentName } = req.body;
@@ -63,13 +63,64 @@ export const updateDepartment = asyncHandler(async (req, res, next) => {
 });
 
 //  Delete department
-export const deleteDepartment = asyncHandler(async (req, res, next) => {
+export const deleteDepartment = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const department = await Department.findByIdAndDelete(id);
+  const department = await Department.findById(id);
   if (!department) {
-    return next(new AppError("Department not found", 404));
+    return res.status(404).json({ message: "Department not found" });
   }
 
-  res.status(200).json({ message: "Department deleted successfully" });
+  // حذف كل الموظفين اللي ليهم نفس الـ department
+  await Employee.deleteMany({ department: id });
+
+  // حذف القسم نفسه
+  await department.deleteOne();
+
+  res.status(200).json({ message: "Department and related employees deleted" });
 });
+
+
+
+
+
+
+// export const deleteDepartment = asyncHandler(async (req, res, next) => {
+//   const { id } = req.params;
+
+//   const department = await Department.findOne({ _id: id, isDeleted: false });
+//   if (!department) {
+//     return next(new AppError("Department not found", 404));
+//   }
+
+//   // Soft delete للموظفين المرتبطين بالقسم
+//   await Employee.updateMany(
+//     { department: id },
+//     {
+//       isDeleted: true,
+//       deletedAt: new Date(),
+//     }
+//   );
+
+//   // Soft delete للقسم 
+//   await Department.findByIdAndUpdate(id, {
+//     isDeleted: true,
+//     deletedAt: new Date(),
+//   });
+
+//   return res.status(200).json({
+//     message: "Department and its employees marked as deleted",
+//   });
+// });
+
+
+// export const deleteDepartment = asyncHandler(async (req, res, next) => {
+//   const { id } = req.params;
+
+//   const department = await Department.findByIdAndDelete(id);
+//   if (!department) {
+//     return next(new AppError("Department not found", 404));
+//   }
+
+//   res.status(200).json({ message: "Department deleted successfully" });
+// });
