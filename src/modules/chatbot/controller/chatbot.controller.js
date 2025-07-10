@@ -2,6 +2,8 @@ import Employee from "../../../../DB/model/Employee.js";
 import asyncHandler from "../../../utils/asyncHandeler.js";
 import Attendance from "../../../../DB/model/Attendence.js";
 import Department from "../../../../DB/model/Department.js";
+let hrChatState = {};
+
 
 export const processChat = asyncHandler(async (req, res) => {
   const { message, language } = req.body;
@@ -58,6 +60,134 @@ export const processChat = asyncHandler(async (req, res) => {
       reply: language === "ar" ? `الموظفين الغايبين:\n${names}` : `Absent employees:\n${names}`,
     });
   }
+
+
+  
+  // Get employee department
+if (hrChatState.waitingFor === "departmentName") {
+const name = message.trim().replace(/\s+/g, " ");
+const [firstName, lastName] = name.split(" ");
+
+
+    if (!firstName || !lastName) {
+      return res.json({
+        reply:
+          language === "ar"
+            ? "من فضلك اكتب الاسم الأول والاسم الأخير معًا."
+            : "Please enter both first name and last name.",
+      });
+    }
+
+    const employee = await Employee.findOne({
+      firstName: new RegExp(`^${firstName}$`, "i"),
+      lastName: new RegExp(`^${lastName}$`, "i"),
+      isDeleted: false,
+    }).populate("department");
+
+    if (!employee) {
+      return res.json({
+        reply:
+          language === "ar"
+            ? "لا يوجد موظف بهذا الاسم. حاول تكتب الاسم مرة تانية."
+            : "Employee not found. Please try entering the name again.",
+      });
+    }
+
+    hrChatState = {}; 
+
+    const dept = employee.department?.departmentName;
+
+    return res.json({
+      reply:
+        language === "ar"
+          ? dept
+            ? `الموظف ${employee.firstName} ${employee.lastName} شغال في قسم ${dept}`
+            : "الموظف غير مسجل في أي قسم."
+          : dept
+          ? `${employee.firstName} ${employee.lastName} works in ${dept} department`
+          : "Employee is not assigned to any department.",
+    });
+  }
+
+  // Get employee hire date
+if (hrChatState.waitingFor === "hireDate") {
+const name = message.trim().replace(/\s+/g, " ");
+const [firstName, lastName] = name.split(" ");
+
+
+    if (!firstName || !lastName) {
+      return res.json({
+        reply:
+          language === "ar"
+            ? "من فضلك اكتب الاسم الأول والاسم الأخير معًا."
+            : "Please enter both first name and last name.",
+      });
+    }
+
+    const employee = await Employee.findOne({
+      firstName: new RegExp(`^${firstName}$`, "i"),
+      lastName: new RegExp(`^${lastName}$`, "i"),
+      isDeleted: false,
+    });
+
+    if (!employee) {
+      return res.json({
+        reply:
+          language === "ar"
+            ? "لا يوجد موظف بهذا الاسم. حاول تكتب الاسم مرة تانية."
+            : "Employee not found. Please try entering the name again.",
+      });
+    }
+
+    hrChatState = {}; 
+
+    const dateStr = employee.hireDate.toLocaleDateString("ar-EG");
+
+    return res.json({
+      reply:
+        language === "ar"
+          ? `${employee.firstName} اتعين يوم ${dateStr}`
+          : `${employee.firstName} was hired on ${employee.hireDate.toDateString()}`,
+    });
+  }
+
+  if (
+    (language === "ar" && msg === "اعرف قسم موظف") ||
+    (language === "en" && msg === "get employee department")
+  ) {
+    hrChatState = { waitingFor: "departmentName" };
+    return res.json({
+      reply:
+        language === "ar"
+          ? "من فضلك اكتب اسم الموظف (بالإنجليزي)"
+          : "Please enter the employee name (in English)",
+    });
+  }
+
+  if (
+    (language === "ar" && msg === "اعرف تاريخ تعيين موظف") ||
+    (language === "en" && msg === "get employee hire date")
+  ) {
+    hrChatState = { waitingFor: "hireDate" };
+    return res.json({
+      reply:
+        language === "ar"
+          ? "من فضلك اكتب اسم الموظف (بالإنجليزي)"
+          : "Please enter the employee name (in English)",
+    });
+  }
+
+  // If waiting for input but got something irrelevant
+  if (hrChatState.waitingFor) {
+    return res.json({
+      reply:
+        language === "ar"
+          ? "من فضلك اكتب اسم الموظف (بالإنجليزي)."
+          : "Please enter the employee name (in English).",
+    });
+  }
+
+
 
   //  رد افتراضي
   return res.json({
