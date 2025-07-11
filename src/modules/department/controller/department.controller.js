@@ -8,9 +8,10 @@ import Attendance from "../../../../DB/model/Attendence.js";
 export const createDepartment = asyncHandler(async (req, res, next) => {
   const { departmentName } = req.body;
 
-  //  Check if department already exists (case insensitive)
+  // Check if department already exists (case insensitive)
   const existing = await Department.findOne({
     departmentName: { $regex: new RegExp(`^${departmentName}$`, "i") },
+    isDeleted: false,
   });
 
   if (existing) {
@@ -26,27 +27,28 @@ export const createDepartment = asyncHandler(async (req, res, next) => {
   });
 });
 
-//  Get all departments
+// ✅ Get all departments (only not deleted)
 export const getAllDepartments = asyncHandler(async (req, res) => {
-  const departments = await Department.find();
+  const departments = await Department.find({ isDeleted: false });
   res.status(200).json(departments);
 });
 
-//  Update department
+// ✅ Update department
 export const updateDepartment = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const { departmentName } = req.body;
 
-  const department = await Department.findById(id);
+  const department = await Department.findOne({ _id: id, isDeleted: false });
   if (!department) {
     return next(new AppError("Department not found", 404));
   }
 
-  //  Check for duplicate name (excluding current department)
+  // Check for duplicate name (excluding current department)
   if (departmentName) {
     const existing = await Department.findOne({
       _id: { $ne: id },
       departmentName: { $regex: new RegExp(`^${departmentName}$`, "i") },
+      isDeleted: false,
     });
 
     if (existing) {
@@ -64,50 +66,36 @@ export const updateDepartment = asyncHandler(async (req, res, next) => {
   });
 });
 
-// //  Delete department
-// export const deleteDepartment = asyncHandler(async (req, res) => {
-//   const { id } = req.params;
-
-//   const department = await Department.findById(id);
-//   if (!department) {
-//     return res.status(404).json({ message: "Department not found" });
-//   }
-
-//   // حذف كل الموظفين اللي ليهم نفس الـ department
-//   await Employee.deleteMany({ department: id });
-
-//   // حذف القسم نفسه
-//   await department.deleteOne();
-
-//   res.status(200).json({ message: "Department and related employees deleted" });
-// });
-
-// Delete department
+// ✅ Soft Delete department
 export const deleteDepartment = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const department = await Department.findById(id);
+  const department = await Department.findOne({ _id: id, isDeleted: false });
   if (!department) {
-    return res.status(404).json({ message: "Department not found" });
+    return res.status(404).json({ message: "Department not found or already deleted" });
   }
 
-  // جيب كل الموظفين اللي في القسم
-  const employeesInDepartment = await Employee.find({ department: id });
+  // Get all employees in the department
+  const employeesInDepartment = await Employee.find({ department: id, isDeleted: false });
 
-  // استخرج الـ IDs بتاعتهم
+  // Extract their IDs
   const employeeIds = employeesInDepartment.map((emp) => emp._id);
 
-  // احذف الـ attendance الخاص بيهم
-  await Attendance.deleteMany({ employee: { $in: employeeIds } });
+  // Soft delete attendance records of these employees
+  await Attendance.updateMany(
+    { employee: { $in: employeeIds } },
+    { $set: { isDeleted: true } }
+  );
 
-  // احذف الموظفين
-  await Employee.deleteMany({ department: id });
+  // Soft delete the employees
+  await Employee.updateMany(
+    { _id: { $in: employeeIds } },
+    { $set: { isDeleted: true } }
+  );
 
-  // احذف القسم نفسه
-  await department.deleteOne();
+  // Soft delete the department itself
+  department.isDeleted = true;
+  await department.save();
 
-  res.status(200).json({ message: "Department, employees, and attendance records deleted" });
+  res.status(200).json({ message: "Soft deleted department, employees, and attendance records" });
 });
-
-
-
