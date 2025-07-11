@@ -171,12 +171,10 @@ export const getPayrollByEmployee = asyncHandler(async (req, res, next) => {
     }).populate("employee"),
   ]);
 
-  const employees = await Employee.find({
-    _id: { $in: employeesWithAttendance },
+  const emp = await Employee.findOne({
+    _id: employeeId,
     isDeleted: { $ne: true },
-  })
-    .populate("department")
-    .then((result) => result.filter((emp) => !emp.department?.deleted));
+  }).populate("department");
 
   if (!emp || emp.department?.deleted) {
     return next(
