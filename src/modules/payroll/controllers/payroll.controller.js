@@ -11,12 +11,16 @@ import { calculatePayroll } from "../../../utils/PayrollService.js";
 export const getAllPayrolls = asyncHandler(async (req, res, next) => {
   const { month, year } = req.query;
 
-  if (!/^(0[1-9]|1[0-2])$/.test(month) || !/^\d{4}$/.test(year)) {
-    return next(new AppError("Year Or Month Format Is Not Valid", 400));
-  }
+  const numericYear = parseInt(year);
+  const numericMonth = parseInt(month);
 
-  if (parseInt(year) > new Date().getFullYear()) {
-    return next(new AppError("Year Can't be In The Future", 400));
+  if (
+    !/^(0[1-9]|1[0-2])$/.test(month) ||
+    !/^\d{4}$/.test(year) ||
+    numericYear < 2000 ||
+    numericYear > new Date().getFullYear()
+  ) {
+    return next(new AppError("Invalid month or year", 400));
   }
 
   const [employeesWithAttendance, holidays, monthAttendence] =
@@ -136,6 +140,9 @@ export const getAllPayrolls = asyncHandler(async (req, res, next) => {
       employee: existingPayroll?.employee || emp,
     });
   }
+  if (empPayroll.length === 0) {
+    return next(new AppError("No payroll records found for this month", 404));
+  }
   res.status(200).json(empPayroll);
 });
 
@@ -156,7 +163,7 @@ export const getPayrollByEmployee = asyncHandler(async (req, res, next) => {
       $expr: {
         $and: [
           { $eq: [{ $month: "$date" }, parseInt(month)] },
-          { $eq: [{ $year: "$date " }, parseInt(year)] },
+          { $eq: [{ $year: "$date" }, parseInt(year)] },
         ],
       },
     }),
