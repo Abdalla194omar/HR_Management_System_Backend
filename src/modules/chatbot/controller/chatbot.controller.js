@@ -101,7 +101,7 @@ const [firstName, lastName] = name.split(" ");
       reply:
         language === "ar"
           ? dept
-            ? `الموظف ${employee.firstName} ${employee.lastName} شغال في قسم ${dept}`
+            ? `شغال في قسم ${employee.firstName} ${employee.lastName}  الموظف  ${dept}`
             : "الموظف غير مسجل في أي قسم."
           : dept
           ? `${employee.firstName} ${employee.lastName} works in ${dept} department`
@@ -146,7 +146,7 @@ const [firstName, lastName] = name.split(" ");
     return res.json({
       reply:
         language === "ar"
-          ? `${employee.firstName} اتعين يوم ${dateStr}`
+          ? `${employee.firstName}  ${dateStr} اتعين يوم`
           : `${employee.firstName} was hired on ${employee.hireDate.toDateString()}`,
     });
   }
