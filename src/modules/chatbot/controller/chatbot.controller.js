@@ -2,60 +2,272 @@ import Employee from "../../../../DB/model/Employee.js";
 import asyncHandler from "../../../utils/asyncHandeler.js";
 import Attendance from "../../../../DB/model/Attendence.js";
 import Department from "../../../../DB/model/Department.js";
-import { attendanceReportFunc, lateEmployeesFunc, topEmployeesFunc } from "../../../utils/ChatbotAttendance.js";
+import {
+  attendanceReportFunc,
+  lateEmployeesFunc,
+  topEmployeesFunc,
+} from "../../../utils/ChatbotAttendance.js";
+import Holiday from "../../../../DB/model/Holiday.js";
+import { calculatePayroll } from "../../../utils/PayrollService.js";
+
+let hrChatState = {};
+
+function checkRestart(message, language) {
+  const msg = message.toLowerCase();
+
+  if (msg.includes("مرتب") || msg.includes("salary")) {
+    hrChatState = { waitingFor: "employeeName" };
+
+    return {
+      shouldRestart: true,
+      reply:
+        language === "ar"
+          ? "سنبدأ من جديد.\nمن فضلك ادخل اسم الموظف بالإنجليزي"
+          : "Let's start over.\nPlease enter the employee name (in English)",
+    };
+  }
+
+  return { shouldRestart: false };
+}
 
 export const processChat = asyncHandler(async (req, res) => {
   console.log("chat controller");
-  console.log(req.body)
+  console.log(req.body);
   const { message, language } = req.body;
   const msg = message.toLowerCase().trim();
 
+  const monthNames = {
+    "01": { ar: "يناير", en: "January" },
+    "02": { ar: "فبراير", en: "February" },
+    "03": { ar: "مارس", en: "March" },
+    "04": { ar: "أبريل", en: "April" },
+    "05": { ar: "مايو", en: "May" },
+    "06": { ar: "يونيو", en: "June" },
+    "07": { ar: "يوليو", en: "July" },
+    "08": { ar: "أغسطس", en: "August" },
+    "09": { ar: "سبتمبر", en: "September" },
+    10: { ar: "أكتوبر", en: "October" },
+    11: { ar: "نوفمبر", en: "November" },
+    12: { ar: "ديسمبر", en: "December" },
+  };
+
+  // === الأسئلة التفاعلية الخاصة بالراتب ===
+  if (hrChatState.waitingFor === "employeeName") {
+    // if the user wants to restart the salary query
+    const restart = checkRestart(message, language);
+    if (restart.shouldRestart) {
+      return res.json({ reply: restart.reply });
+    }
+
+    hrChatState.employeeName = message.trim();
+    hrChatState.waitingFor = "month";
+    return res.json({
+      reply:
+        language === "ar"
+          ? "من فضلك ادخل رقم الشهر (مثال: 07)"
+          : "Please enter the month (e.g., 07)",
+    });
+  }
+
+  if (hrChatState.waitingFor === "month") {
+    // if the user wants to restart the salary query
+    const restart = checkRestart(message, language);
+    if (restart.shouldRestart) {
+      return res.json({ reply: restart.reply });
+    }
+
+    hrChatState.month = message.trim();
+    hrChatState.waitingFor = "year";
+    return res.json({
+      reply:
+        language === "ar"
+          ? "من فضلك ادخل السنة (مثال: 2025)"
+          : "Please enter the year (e.g., 2025)",
+    });
+  }
+
+  if (hrChatState.waitingFor === "year") {
+    // if the user wants to restart the salary query
+    const restart = checkRestart(message, language);
+    if (restart.shouldRestart) {
+      return res.json({ reply: restart.reply });
+    }
+
+    hrChatState.year = message.trim();
+
+    const { employeeName, month, year } = hrChatState;
+    hrChatState = {}; // تصفير الحالة
+
+    const monthName = monthNames[month]?.[language] || month;
+
+    const employee = await Employee.findOne({
+      isDeleted: false,
+      $expr: {
+        $regexMatch: {
+          input: { $concat: ["$firstName", " ", "$lastName"] },
+          regex: new RegExp(`^${employeeName}$`, "i"),
+        },
+      },
+    });
+
+    if (!employee) {
+      return res.json({
+        reply:
+          language === "ar"
+            ? "الموظف غير موجود. تأكد من كتابة الاسم بالإنجليزي كما هو مسجل."
+            : "Employee not found. Make sure to enter the name in English as registered.",
+      });
+    }
+
+    const [holidays, attendance] = await Promise.all([
+      Holiday.find({
+        $expr: {
+          $and: [
+            { $eq: [{ $month: "$date" }, parseInt(month)] },
+            { $eq: [{ $year: "$date" }, parseInt(year)] },
+          ],
+        },
+      }),
+      Attendance.find({
+        employee: employee._id,
+        $expr: {
+          $and: [
+            { $eq: [{ $year: "$date" }, parseInt(year)] },
+            { $eq: [{ $month: "$date" }, parseInt(month)] },
+          ],
+        },
+      }).populate("employee"),
+    ]);
+
+    if (!attendance.length) {
+      return res.json({
+        reply:
+          language === "ar"
+            ? "لا يوجد حضور لهذا الموظف في هذا الشهر."
+            : "No attendance found for this employee in that month.",
+      });
+    }
+
+    const payroll = await calculatePayroll(
+      employee,
+      attendance,
+      holidays,
+      month,
+      year
+    );
+
+    return res.json({
+      reply:
+        language === "ar"
+          ? `💰 <strong>مرتب ${employeeName}</strong><br />
+    📅 عن شهر <strong>${monthName} ${year}</strong><br />
+    💵 <strong>${payroll.netSalary.toFixed(2)} جنيه</strong>`
+          : `💰 <strong>Salary for ${employeeName}</strong><br />
+    📅 Month: <strong>${monthName} ${year}</strong><br />
+    💵 Amount: <strong>${payroll.netSalary.toFixed(2)} EGP</strong>`,
+    });
+  }
+
+  // === بداية سيناريو طلب المرتب ===
+  if (
+    (language === "ar" && msg.includes("مرتب")) ||
+    (language === "en" && msg.includes("salary"))
+  ) {
+    hrChatState = { waitingFor: "employeeName" };
+    return res.json({
+      reply:
+        language === "ar"
+          ? "من فضلك ادخل اسم الموظف بالإنجليزي"
+          : "Please enter the employee name (in English)",
+    });
+  }
+
   // عدد الموظفين
-  if ((language === "ar" && msg.includes("عدد الموظفين")) || (language === "en" && msg.includes("how many employees"))) {
+  if (
+    (language === "ar" && msg.includes("عدد الموظفين")) ||
+    (language === "en" && msg.includes("how many employees"))
+  ) {
     const totalEmployees = await Employee.countDocuments({ isDeleted: false });
-    const reply = language === "ar" ? `عدد الموظفين الحالي هو: ${totalEmployees}` : `Current number of employees is: ${totalEmployees}`;
+    const reply =
+      language === "ar"
+        ? `عدد الموظفين الحالي هو: ${totalEmployees}`
+        : `Current number of employees is: ${totalEmployees}`;
     return res.json({ reply });
   }
 
   // عدد الأقسام
-  if ((language === "ar" && msg.includes("عدد الأقسام")) || (language === "en" && msg.includes("how many departments"))) {
-    const totalDepartments = await Department.countDocuments({ isDeleted: false });
-    const reply = language === "ar" ? `عدد الأقسام الحالية هو: ${totalDepartments}` : `Current number of departments is: ${totalDepartments}`;
+  if (
+    (language === "ar" && msg.includes("عدد الأقسام")) ||
+    (language === "en" && msg.includes("how many departments"))
+  ) {
+    const totalDepartments = await Department.countDocuments({
+      isDeleted: false,
+    });
+    const reply =
+      language === "ar"
+        ? `عدد الأقسام الحالية هو: ${totalDepartments}`
+        : `Current number of departments is: ${totalDepartments}`;
     return res.json({ reply });
   }
 
   // الأقسام الموجودة في الشركة
-  if ((language === "ar" && msg.includes("الأقسام في الشركة")) || (language === "en" && msg.includes("departments in the company"))) {
+  if (
+    (language === "ar" && msg.includes("الأقسام في الشركة")) ||
+    (language === "en" && msg.includes("departments in the company"))
+  ) {
     const departments = await Department.find({ isDeleted: false });
     const reply =
       language === "ar"
-        ? `الأقسام الموجودة في الشركة هي:\n${departments.map((depart) => `• ${depart.departmentName}`).join("\n")}`
-        : `The departments in the company are:\n${departments.map((depart) => `• ${depart.departmentName}`).join("\n")}`;
+        ? `الأقسام الموجودة في الشركة هي:\n${departments
+            .map((depart) => `• ${depart.departmentName}`)
+            .join("\n")}`
+        : `The departments in the company are:\n${departments
+            .map((depart) => `• ${depart.departmentName}`)
+            .join("\n")}`;
     return res.json({ reply });
   }
 
   // الموظف المميز لهذا الشهر
-  if ((language === "ar" && msg.includes("الموظفين المميزين")) || (language === "en" && msg.includes("top employees"))) {
+  if (
+    (language === "ar" && msg.includes("الموظفين المميزين")) ||
+    (language === "en" && msg.includes("top employees"))
+  ) {
     const reply = await topEmployeesFunc(language);
     return res.json(reply);
   }
 
   // الموظفين المتجاوزين لساعات التأخير المسموحة في الشهر
-  if ((language === "ar" && msg.includes("الموظفين المتجاوزين")) || (language === "en" && msg.includes("employees exceeded the allowed lateness"))) {
+  if (
+    (language === "ar" && msg.includes("الموظفين المتجاوزين")) ||
+    (language === "en" &&
+      msg.includes("employees exceeded the allowed lateness"))
+  ) {
     const reply = await lateEmployeesFunc(language);
     return res.json(reply);
   }
 
   // تقرير الحضور لهذا الشهر
-  if ((language === "ar" && msg.includes("تقرير الحضور والغياب")) || (language === "en" && msg.includes("attendance report"))) {
+  if (
+    (language === "ar" && msg.includes("تقرير الحضور والغياب")) ||
+    (language === "en" && msg.includes("attendance report"))
+  ) {
     const reply = await attendanceReportFunc(language);
     return res.json(reply);
   }
 
   // الغياب اليومي
-  if ((language === "ar" && msg.includes("غياب النهارده")) || (language === "en" && msg.includes("absent today"))) {
+  if (
+    (language === "ar" && msg.includes("غياب النهارده")) ||
+    (language === "en" && msg.includes("absent today"))
+  ) {
     const todayDate = new Date();
-    const todayUtcDate = new Date(Date.UTC(todayDate.getUTCFullYear(), todayDate.getUTCMonth(), todayDate.getUTCDate()));
+    const todayUtcDate = new Date(
+      Date.UTC(
+        todayDate.getUTCFullYear(),
+        todayDate.getUTCMonth(),
+        todayDate.getUTCDate()
+      )
+    );
     const tomorrowUtcDate = new Date(todayUtcDate);
     tomorrowUtcDate.setUTCDate(tomorrowUtcDate.getUTCDate() + 1);
 
@@ -69,24 +281,29 @@ export const processChat = asyncHandler(async (req, res) => {
 
     if (absentList.length === 0) {
       return res.json({
-        reply: language === "ar" ? "كل الموظفين حضروا النهاردة " : "All employees are present today",
+        reply:
+          language === "ar"
+            ? "كل الموظفين حضروا النهاردة "
+            : "All employees are present today",
       });
     }
 
-    const names = absentList.map((a) => `${a.employee.firstName} ${a.employee.lastName}`).join("-");
+    const names = absentList
+      .map((a) => `${a.employee.firstName} ${a.employee.lastName}`)
+      .join("-");
 
     return res.json({
-      reply: language === "ar" ? `الموظفين الغايبين:\n${names}` : `Absent employees:\n${names}`,
+      reply:
+        language === "ar"
+          ? `الموظفين الغايبين:\n${names}`
+          : `Absent employees:\n${names}`,
     });
   }
 
-
-  
   // Get employee department
-if (hrChatState.waitingFor === "departmentName") {
-const name = message.trim().replace(/\s+/g, " ");
-const [firstName, lastName] = name.split(" ");
-
+  if (hrChatState.waitingFor === "departmentName") {
+    const name = message.trim().replace(/\s+/g, " ");
+    const [firstName, lastName] = name.split(" ");
 
     if (!firstName || !lastName) {
       return res.json({
@@ -112,7 +329,7 @@ const [firstName, lastName] = name.split(" ");
       });
     }
 
-    hrChatState = {}; 
+    hrChatState = {};
 
     const dept = employee.department?.departmentName;
 
@@ -129,10 +346,9 @@ const [firstName, lastName] = name.split(" ");
   }
 
   // Get employee hire date
-if (hrChatState.waitingFor === "hireDate") {
-const name = message.trim().replace(/\s+/g, " ");
-const [firstName, lastName] = name.split(" ");
-
+  if (hrChatState.waitingFor === "hireDate") {
+    const name = message.trim().replace(/\s+/g, " ");
+    const [firstName, lastName] = name.split(" ");
 
     if (!firstName || !lastName) {
       return res.json({
@@ -158,7 +374,7 @@ const [firstName, lastName] = name.split(" ");
       });
     }
 
-    hrChatState = {}; 
+    hrChatState = {};
 
     const dateStr = employee.hireDate.toLocaleDateString("ar-EG");
 
@@ -166,7 +382,9 @@ const [firstName, lastName] = name.split(" ");
       reply:
         language === "ar"
           ? `${employee.firstName}  ${dateStr} اتعين يوم`
-          : `${employee.firstName} was hired on ${employee.hireDate.toDateString()}`,
+          : `${
+              employee.firstName
+            } was hired on ${employee.hireDate.toDateString()}`,
     });
   }
 
@@ -206,10 +424,11 @@ const [firstName, lastName] = name.split(" ");
     });
   }
 
-
-
   //  رد افتراضي
   return res.json({
-    reply: language === "ar" ? "لم أستطع فهم سؤالك. برجاء المحاولة بصيغة مختلفة." : "Sorry, I couldn't understand your question. Try rephrasing.",
+    reply:
+      language === "ar"
+        ? "لم أستطع فهم سؤالك. برجاء المحاولة بصيغة مختلفة."
+        : "Sorry, I couldn't understand your question. Try rephrasing.",
   });
 });
