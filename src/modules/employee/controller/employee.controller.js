@@ -206,7 +206,6 @@ export const deleteEmployee = asyncHandler(async (req, res, next) => {
     { employee: employee._id },
     {
       isDeleted: true,
-      deletedAt: new Date(),
     }
   );
   console.log("Attendance update result:", result);
