@@ -53,12 +53,15 @@ export const getAllPayrolls = asyncHandler(async (req, res, next) => {
 
   const employees = await Employee.find({
     _id: { $in: employeesWithAttendance },
-    isDeleted: { $ne: true },
-  })
-    .populate("department")
-    .then((results) =>
-      results.filter((emp) => emp.department && emp.department.deleted !== true)
-    );
+  }).populate("department");
+
+  // const employees = await Employee.find({
+  //   _id: { $in: employeesWithAttendance },
+  // isDeleted: { $ne: true },
+  // }).populate("department");
+  // .then((results) =>
+  //   results.filter((emp) => emp.department && emp.department.deleted !== true)
+  // );
 
   let empPayroll = [];
 
@@ -87,6 +90,7 @@ export const getAllPayrolls = asyncHandler(async (req, res, next) => {
 
     const employeeUpdated =
       existingPayroll && emp.updatedAt > existingPayroll.updatedAt;
+
     const attendanceUpdated = employeeAttendance.some(
       (a) => !existingPayroll || a.updatedAt > existingPayroll.updatedAt
     );

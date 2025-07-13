@@ -39,4 +39,16 @@ const HolidaySchema = new Schema(
   { timestamps: true }
 );
 
+HolidaySchema.pre("findOneAndUpdate", function (next) {
+  const update = this.getUpdate();
+  if (update && typeof update.isDeleted !== "undefined") {
+    if (update.isDeleted === true && !update.deletedAt) {
+      this.setUpdate({ ...update, deletedAt: new Date() });
+    } else if (update.isDeleted === false) {
+      this.setUpdate({ ...update, deletedAt: null });
+    }
+  }
+  next();
+});
+
 export default mongoose.model("Holiday", HolidaySchema);

@@ -24,4 +24,11 @@ const DepartmentSchema = new Schema(
   { timestamps: true }
 );
 
+DepartmentSchema.pre("save", function (next) {
+  if (this.isDeleted && !this.deletedAt) {
+    this.deletedAt = new Date();
+  }
+  next();
+});
+
 export default mongoose.model("Department", DepartmentSchema);

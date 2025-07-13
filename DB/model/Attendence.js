@@ -78,4 +78,28 @@ AttendanceSchema.pre(/^find/, function (next) {
   next();
 });
 
+AttendanceSchema.pre("save", function (next) {
+  if (this.isDeleted && !this.deletedAt) {
+    this.deletedAt = new Date();
+  }
+
+  if (!this.isDeleted) {
+    this.deletedAt = null;
+  }
+
+  next();
+});
+
+AttendanceSchema.pre("updateMany", function (next) {
+  const update = this.getUpdate();
+  if (update && typeof update.isDeleted !== "undefined") {
+    if (update.isDeleted === true && !update.deletedAt) {
+      this.setUpdate({ ...update, deletedAt: new Date() });
+    } else if (update.isDeleted === false) {
+      this.setUpdate({ ...update, deletedAt: null });
+    }
+  }
+  next();
+});
+
 export default mongoose.model("Attendance", AttendanceSchema);

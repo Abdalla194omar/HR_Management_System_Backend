@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 const { Schema, model } = mongoose;
 
 const EmployeeSchema = new Schema(
-
   {
     firstName: {
       type: String,
@@ -21,7 +20,7 @@ const EmployeeSchema = new Schema(
     email: {
       type: String,
       required: [true, "Email is required"],
-      unique: [true,"Email is unique"],
+      unique: [true, "Email is unique"],
       lowercase: true,
       trim: true,
       match: [/\S+@\S+\.\S+/, "Email must be a valid format"],
@@ -101,7 +100,7 @@ const EmployeeSchema = new Schema(
     nationalId: {
       type: String,
       required: [true, "National ID is required"],
-      unique: [true,"nationalId is unique"],
+      unique: [true, "nationalId is unique"],
       sparse: true,
       match: [/^\d{14}$/, "National ID must be 14 digits"],
     },
@@ -159,18 +158,25 @@ const EmployeeSchema = new Schema(
       },
     },
   },
-  { timestamps: true,
-     toJSON: { virtuals: true }, 
-    toObject: { virtuals: true },
-   }
+  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
+EmployeeSchema.pre("findOneAndUpdate", function (next) {
+  const update = this.getUpdate();
 
+  if (update && typeof update.isDeleted !== "undefined") {
+    if (update.isDeleted === true && !update.deletedAt) {
+      this.setUpdate({ ...update, deletedAt: new Date() });
+    } else if (update.isDeleted === false) {
+      this.setUpdate({ ...update, deletedAt: null });
+    }
+  }
 
-EmployeeSchema.virtual('fullName').get(function () {
+  next();
+});
+
+EmployeeSchema.virtual("fullName").get(function () {
   return `${this.firstName} ${this.lastName}`;
 });
 
-
 export default model("Employee", EmployeeSchema);
-
