@@ -36,8 +36,6 @@ const getDaysDifference = (date1, date2) => {
 };
 
 export const processChat = asyncHandler(async (req, res) => {
-  console.log("chat controller");
-  console.log(req.body);
   const { message, language } = req.body;
   const msg = message.toLowerCase().trim();
 
@@ -451,7 +449,6 @@ export const processChat = asyncHandler(async (req, res) => {
         $lt: new Date(currentYear, currentMonth + 1, 1),
       },
       isDeleted: false,
-      
     });
 
     if (holidaysThisMonth.length === 0) {
@@ -502,7 +499,6 @@ export const processChat = asyncHandler(async (req, res) => {
     const futureHolidays = await Holiday.find({
       date: { $gte: today },
       isDeleted: false,
-      
     });
 
     if (futureHolidays.length === 0) {

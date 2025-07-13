@@ -88,7 +88,7 @@ export const getAllEmployeesWithoutPagination = asyncHandler(
       select: "departmentName",
     });
     if (employees.length === 0) {
-      return res.status(404).json({ message: "No employees found" });
+      return next(new AppError("No employees found", 404));
     }
     res
       .status(200)
@@ -199,14 +199,11 @@ export const deleteEmployee = asyncHandler(async (req, res, next) => {
 
   if (!employee) return next(new AppError("Error employee not found", 400));
 
-  console.log("Deleting attendances for employee:", employee._id);
-
   const result = await Attendance.updateMany(
     { employee: employee._id },
     {
       isDeleted: true,
     }
   );
-  console.log("Attendance update result:", result);
   res.status(201).json({ message: "Employee Deleted Successfully" });
 });

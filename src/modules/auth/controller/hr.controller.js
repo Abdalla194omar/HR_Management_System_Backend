@@ -2,19 +2,23 @@ import HR from "../../../../DB/model/HR.js";
 import asyncHandler from "express-async-handler";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
+import AppError from "../../../utils/AppError.js";
 
 export const loginHR = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
 
   const hr = await HR.findOne({ email });
   if (!hr || !(await bcrypt.compare(password, hr.password))) {
-    return res.status(401).json({ error: "Invalid email or password" });
+    return next(new AppError("Invalid email or password"), 401);
   }
 
-  const token = jwt.sign({ id: hr._id, role: "HR", email: hr.email }, "123pass", {
-  expiresIn: "1h",
-});
-
+  const token = jwt.sign(
+    { id: hr._id, role: "HR", email: hr.email },
+    "123pass",
+    {
+      expiresIn: "1h",
+    }
+  );
 
   res.status(200).json({ message: "Login successful", token });
 });
@@ -24,7 +28,7 @@ export const register = asyncHandler(async (req, res, next) => {
 
   const hrFound = await HR.findOne({ email });
   if (hrFound) {
-    return res.status(400).json({ error: "HR already exists" });
+    return next(new AppError("HR with this email already exists", 400));
   }
 
   const hrUser = await HR.create({ name, email, password });

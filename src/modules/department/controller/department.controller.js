@@ -4,7 +4,7 @@ import AppError from "../../../utils/AppError.js";
 import Employee from "../../../../DB/model/Employee.js";
 import Attendance from "../../../../DB/model/Attendence.js";
 
-// ✅ Create department
+// Create department
 export const createDepartment = asyncHandler(async (req, res, next) => {
   const { departmentName } = req.body;
 
@@ -27,13 +27,13 @@ export const createDepartment = asyncHandler(async (req, res, next) => {
   });
 });
 
-// ✅ Get all departments (only not deleted)
+// Get all departments (only not deleted)
 export const getAllDepartments = asyncHandler(async (req, res) => {
   const departments = await Department.find({ isDeleted: false });
   res.status(200).json(departments);
 });
 
-// ✅ Update department
+// Update department
 export const updateDepartment = asyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const { departmentName } = req.body;
@@ -68,15 +68,13 @@ export const updateDepartment = asyncHandler(async (req, res, next) => {
   });
 });
 
-// ✅ Soft Delete department
+// Soft Delete department
 export const deleteDepartment = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const department = await Department.findOne({ _id: id, isDeleted: false });
   if (!department) {
-    return res
-      .status(404)
-      .json({ message: "Department not found or already deleted" });
+    return next(new AppError("Department not found or already deleted", 404));
   }
 
   // Get all employees in the department
@@ -108,42 +106,3 @@ export const deleteDepartment = asyncHandler(async (req, res) => {
     message: "Soft deleted department, employees, and attendance records",
   });
 });
-
-// export const deleteDepartment = asyncHandler(async (req, res, next) => {
-//   const { id } = req.params;
-
-//   const department = await Department.findOne({ _id: id, isDeleted: false });
-//   if (!department) {
-//     return next(new AppError("Department not found", 404));
-//   }
-
-//   // Soft delete للموظفين المرتبطين بالقسم
-//   await Employee.updateMany(
-//     { department: id },
-//     {
-//       isDeleted: true,
-//       deletedAt: new Date(),
-//     }
-//   );
-
-//   // Soft delete للقسم
-//   await Department.findByIdAndUpdate(id, {
-//     isDeleted: true,
-//     deletedAt: new Date(),
-//   });
-
-//   return res.status(200).json({
-//     message: "Department and its employees marked as deleted",
-//   });
-// });
-
-// export const deleteDepartment = asyncHandler(async (req, res, next) => {
-//   const { id } = req.params;
-
-//   const department = await Department.findByIdAndDelete(id);
-//   if (!department) {
-//     return next(new AppError("Department not found", 404));
-//   }
-
-//   res.status(200).json({ message: "Department deleted successfully" });
-// });
