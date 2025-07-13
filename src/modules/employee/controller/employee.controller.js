@@ -144,7 +144,6 @@ export const getEmployeeByid = asyncHandler(async (req, res, next) => {
 //  total emp & dep
 export const getTotalEmployees = asyncHandler(async (req, res) => {
   const totalEmployees = await Employee.countDocuments({ isDeleted: false });
-  console.log("good");
   const totalDepartments = await Department.countDocuments({
     isDeleted: false,
   });
