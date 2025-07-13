@@ -175,6 +175,24 @@ EmployeeSchema.pre("findOneAndUpdate", function (next) {
   next();
 });
 
+EmployeeSchema.pre("updateMany", function (next) {
+  const update = this.getUpdate();
+
+  if (update && typeof update.isDeleted !== "undefined") {
+    const updatedFields = { ...update };
+
+    if (update.isDeleted === true) {
+      updatedFields.deletedAt = new Date();
+    } else if (update.isDeleted === false) {
+      updatedFields.deletedAt = null;
+    }
+
+    this.setUpdate(updatedFields);
+  }
+
+  next();
+});
+
 EmployeeSchema.virtual("fullName").get(function () {
   return `${this.firstName} ${this.lastName}`;
 });

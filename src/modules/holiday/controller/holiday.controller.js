@@ -19,7 +19,7 @@ export const createHoliday = asyncHandler(async (req, res) => {
 
 export const getHolidays = asyncHandler(async (req, res) => {
   const { type, date, page = 1, limit = 10 } = req.query;
-  let query = {};
+  let query = { isDeleted: false };
 
   if (type) query.type = type;
   if (date) query.date = new Date(date);
