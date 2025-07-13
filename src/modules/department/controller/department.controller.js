@@ -108,3 +108,42 @@ export const deleteDepartment = asyncHandler(async (req, res) => {
     message: "Soft deleted department, employees, and attendance records",
   });
 });
+
+// export const deleteDepartment = asyncHandler(async (req, res, next) => {
+//   const { id } = req.params;
+
+//   const department = await Department.findOne({ _id: id, isDeleted: false });
+//   if (!department) {
+//     return next(new AppError("Department not found", 404));
+//   }
+
+//   // Soft delete للموظفين المرتبطين بالقسم
+//   await Employee.updateMany(
+//     { department: id },
+//     {
+//       isDeleted: true,
+//       deletedAt: new Date(),
+//     }
+//   );
+
+//   // Soft delete للقسم
+//   await Department.findByIdAndUpdate(id, {
+//     isDeleted: true,
+//     deletedAt: new Date(),
+//   });
+
+//   return res.status(200).json({
+//     message: "Department and its employees marked as deleted",
+//   });
+// });
+
+// export const deleteDepartment = asyncHandler(async (req, res, next) => {
+//   const { id } = req.params;
+
+//   const department = await Department.findByIdAndDelete(id);
+//   if (!department) {
+//     return next(new AppError("Department not found", 404));
+//   }
+
+//   res.status(200).json({ message: "Department deleted successfully" });
+// });

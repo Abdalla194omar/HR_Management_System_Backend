@@ -451,7 +451,7 @@ export const processChat = asyncHandler(async (req, res) => {
         $lt: new Date(currentYear, currentMonth + 1, 1),
       },
       isDeleted: false,
-      type: "Official",
+      
     });
 
     if (holidaysThisMonth.length === 0) {
@@ -502,7 +502,7 @@ export const processChat = asyncHandler(async (req, res) => {
     const futureHolidays = await Holiday.find({
       date: { $gte: today },
       isDeleted: false,
-      type: "Official",
+      
     });
 
     if (futureHolidays.length === 0) {
