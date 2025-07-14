@@ -5,7 +5,7 @@ import asyncHandler from "express-async-handler";
 export const createHoliday = asyncHandler(async (req, res) => {
   const { name, date, type } = req.body;
 
-  const existingHoliday = await Holiday.findOne({ date });
+  const existingHoliday = await Holiday.findOne({ date, isDeleted: false });
   if (existingHoliday) {
     return res
       .status(400)
