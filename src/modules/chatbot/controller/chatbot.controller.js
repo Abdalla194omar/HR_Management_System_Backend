@@ -39,6 +39,40 @@ export const processChat = asyncHandler(async (req, res) => {
   const { message, language } = req.body;
   const msg = message.toLowerCase().trim();
 
+  // Reset state if a new non-followup command is detected
+  if (
+    msg.includes("اعرف") ||
+    msg.includes("get") ||
+    msg.includes("كم") ||
+    msg.includes("عدد") ||
+    msg.includes("تقرير") ||
+    msg.includes("غياب") ||
+    msg.includes("غايب") ||
+    msg.includes("غائب") ||
+    msg.includes("absent") ||
+    msg.includes("absence") ||
+    msg.includes("انضم") ||
+    msg.includes("الأقسام") ||
+    msg.includes("قسم") ||
+    msg.includes("موظفين") ||
+    msg.includes("موظف") ||
+    msg.includes("departments") ||
+    msg.includes("department") ||
+    msg.includes("employees") ||
+    msg.includes("employee") ||
+    msg.includes("holidays") ||
+    msg.includes("holiday") ||
+    msg.includes("اجازة") ||
+    msg.includes("إجازة") ||
+    msg.includes("إجازات") ||
+    msg.includes("اجازات") ||
+    msg.includes("top") ||
+    msg.includes("المميز") ||
+    msg.includes("الموظف المميز")
+  ) {
+    hrChatState = {};
+  }
+
   const monthNames = {
     "01": { ar: "يناير", en: "January" },
     "02": { ar: "فبراير", en: "February" },
@@ -185,23 +219,65 @@ export const processChat = asyncHandler(async (req, res) => {
     });
   }
 
-  // عدد الموظفين
+  // // عدد الأقسام
+  // if (
+  //   (language === "ar" && msg.includes("عدد الأقسام")) ||
+  //   (language === "en" && msg.includes("how many departments"))
+  // ) {
+  //   const totalDepartments = await Department.countDocuments({
+  //     isDeleted: false,
+  //   });
+  //   const reply =
+  //     language === "ar"
+  //       ? `عدد الأقسام الحالية هو: ${totalDepartments}`
+  //       : `Current number of departments is: ${totalDepartments}`;
+  //   return res.json({ reply });
+  // }
+
+  // new: عدد و اسماء الأقسام اللي فيها أكتر من 5 موظفين -
   if (
-    (language === "ar" && msg.includes("عدد الموظفين")) ||
-    (language === "en" && msg.includes("how many employees"))
+    (language === "ar" &&
+      (msg.includes("أقسام فيها أكتر من 5 موظفين") ||
+        msg.includes("قسم فيه أكتر من 5 موظفين"))) ||
+    (language === "en" &&
+      msg.includes("departments with more than 5 employees"))
   ) {
-    const totalEmployees = await Employee.countDocuments({ isDeleted: false });
-    const reply =
-      language === "ar"
-        ? `عدد الموظفين الحالي هو: ${totalEmployees}`
-        : `Current number of employees is: ${totalEmployees}`;
-    return res.json({ reply });
+    const departments = await Department.find({ isDeleted: false });
+
+    let count = 0;
+    let departmentNames = [];
+
+    for (const dep of departments) {
+      const empCount = await Employee.countDocuments({
+        department: dep._id,
+        isDeleted: false,
+      });
+
+      if (empCount > 5) {
+        count++;
+        departmentNames.push(dep.departmentName);
+      }
+    }
+
+    const namesList = departmentNames.map((name) => `• ${name}`).join("\n");
+
+    return res.json({
+      reply:
+        language === "ar"
+          ? count === 0
+            ? "لا يوجد أي قسم فيه أكثر من 5 موظفين."
+            : `📊 عدد الأقسام اللي فيها أكتر من 5 موظفين هو: ${count}\n\n${namesList}`
+          : count === 0
+          ? "There are no departments with more than 5 employees."
+          : `📊 Number of departments with more than 5 employees: ${count}\n\n${namesList}`,
+    });
   }
 
-  // عدد الأقسام
+  // edit: عدد الأقسام فقط (شرط دقيق لتجنب التداخل)
   if (
-    (language === "ar" && msg.includes("عدد الأقسام")) ||
-    (language === "en" && msg.includes("how many departments"))
+    (language === "ar" && msg.trim().includes("عدد الأقسام")) ||
+    (language === "en" && msg.trim().includes("how many departments")) ||
+    (language === "en" && msg.trim().includes("number of departments"))
   ) {
     const totalDepartments = await Department.countDocuments({
       isDeleted: false,
@@ -348,6 +424,51 @@ export const processChat = asyncHandler(async (req, res) => {
     });
   }
 
+  //new: عدد الموظفين في قسم معين
+  if (
+    (language === "ar" && msg.includes("قسم معين")) ||
+    (language === "en" && msg.includes("employees in a department"))
+  ) {
+    hrChatState = { waitingFor: "departmentEmployeeCount" };
+    return res.json({
+      reply:
+        language === "ar" ? "اسم القسم ايه؟" : "What is the department name?",
+    });
+  }
+
+  // المستخدم كتب اسم القسم بعد السؤال
+  if (hrChatState.waitingFor === "departmentEmployeeCount") {
+    const deptName = message.trim(); // مفيش msg هنا لأنه ممكن تكون كابيتال أو فيها علامات
+
+    const possibleDepartment = await Department.findOne({
+      departmentName: { $regex: new RegExp(`^${deptName}$`, "i") },
+      isDeleted: false,
+    });
+
+    if (!possibleDepartment) {
+      return res.json({
+        reply:
+          language === "ar"
+            ? `❌ القسم "${deptName}" غير موجود. حاول تكتب الاسم صح.`
+            : `❌ Department "${deptName}" not found. Please check the name and try again.`,
+      });
+    }
+
+    hrChatState = {};
+
+    const employeeCount = await Employee.countDocuments({
+      department: possibleDepartment._id,
+      isDeleted: false,
+    });
+
+    return res.json({
+      reply:
+        language === "ar"
+          ? `📊 عدد الموظفين في قسم ${possibleDepartment.departmentName}: ${employeeCount}`
+          : `📊 There are ${employeeCount} employees in the ${possibleDepartment.departmentName} department.`,
+    });
+  }
+
   // Get employee hire date
   if (hrChatState.waitingFor === "hireDate") {
     const name = message.trim().replace(/\s+/g, " ");
@@ -427,7 +548,7 @@ export const processChat = asyncHandler(async (req, res) => {
     });
   }
 
-  // الإجازات الرسمية المتبقية خلال هذا الشهر فقط
+  // الإجازات المتبقية خلال هذا الشهر فقط
   if (
     (language === "ar" &&
       (msg.includes("الإجازات") ||
@@ -454,14 +575,14 @@ export const processChat = asyncHandler(async (req, res) => {
     if (holidaysThisMonth.length === 0) {
       const reply =
         language === "ar"
-          ? "لا توجد إجازات رسمية متبقية خلال هذا الشهر."
-          : "There are no upcoming official holidays this month.";
+          ? "لا توجد إجازات متبقية خلال هذا الشهر."
+          : "There are no upcoming holidays this month.";
       return res.json({ reply });
     }
 
     const reply =
       language === "ar"
-        ? `:الإجازات الرسمية المتبقية خلال الشهر:\n${holidaysThisMonth
+        ? `:الإجازات المتبقية خلال الشهر:\n${holidaysThisMonth
             .map((h) => {
               const dateObj = new Date(h.date);
               const formattedDate = dateObj.toLocaleDateString("ar-EG", {
@@ -469,16 +590,16 @@ export const processChat = asyncHandler(async (req, res) => {
                 month: "long",
                 year: "numeric",
               });
-              return `•  في تاريخ ${formattedDate}`;
+              return ` في تاريخ ${formattedDate}`;
             })
             .join("\n")}`
-        : `The official holidays remaining this month:\n${holidaysThisMonth
+        : `The holidays remaining this month:\n${holidaysThisMonth
             .map((h) => {
               const dateObj = new Date(h.date);
               const day = dateObj.getDate();
               const month = dateObj.toLocaleString("en-US", { month: "short" });
               const year = dateObj.getFullYear();
-              return `• on ${day} ${month} ${year}`;
+              return ` on ${day} ${month} ${year}`;
             })
             .join("\n")}`;
 
@@ -520,6 +641,115 @@ export const processChat = asyncHandler(async (req, res) => {
         ? `${daysLeft} يوم${daysLeft > 1 ? "ًا" : ""}`
         : `${daysLeft} day${daysLeft > 1 ? "s" : ""}`;
 
+    return res.json({ reply });
+  }
+
+  //new:  الأقسام اللي مفيهاش موظفين
+  if (
+    (language === "ar" && msg.includes("أقسام بدون موظفين")) ||
+    (language === "en" && msg.includes("departments without employees"))
+  ) {
+    const departments = await Department.find({ isDeleted: false });
+
+    let emptyDepartments = [];
+
+    for (const dep of departments) {
+      const empCount = await Employee.countDocuments({
+        department: dep._id,
+        isDeleted: false,
+      });
+
+      if (empCount === 0) {
+        emptyDepartments.push(dep.departmentName);
+      }
+    }
+
+    if (emptyDepartments.length === 0) {
+      return res.json({
+        reply:
+          language === "ar"
+            ? "كل الأقسام فيها موظفين."
+            : "All departments have employees.",
+      });
+    }
+
+    return res.json({
+      reply:
+        language === "ar"
+          ? `الأقسام اللي مفيهاش موظفين:\n${emptyDepartments
+              .map((d) => `• ${d}`)
+              .join("\n")}`
+          : `Departments without employees:\n${emptyDepartments
+              .map((d) => `• ${d}`)
+              .join("\n")}`,
+    });
+  }
+
+  // should checked using hire date not created at
+  //new: مين آخر موظف انضم؟
+  if (
+    (language === "ar" && msg.includes("آخر موظف انضم")) ||
+    (language === "en" && msg.includes("most recently added employee"))
+  ) {
+    const lastEmployee = await Employee.findOne({ isDeleted: false }).sort({
+      hireDate: -1,
+    });
+
+    if (!lastEmployee) {
+      return res.json({
+        reply:
+          language === "ar"
+            ? "لا يوجد موظفين حاليًا."
+            : "There are no employees currently.",
+      });
+    }
+
+    return res.json({
+      reply:
+        language === "ar"
+          ? `آخر موظف انضم هو: ${lastEmployee.firstName} ${lastEmployee.lastName}`
+          : `The most recently added employee is: ${lastEmployee.firstName} ${lastEmployee.lastName}`,
+    });
+  }
+
+  //  new: عدد الموظفين الجدد هذا الشهر
+  if (
+    (language === "ar" && msg.includes("انضم هذا الشهر")) ||
+    (language === "en" && msg.includes("joined this month"))
+  ) {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      0,
+      23,
+      59,
+      59
+    );
+
+    const newEmployees = await Employee.countDocuments({
+      hireDate: { $gte: startOfMonth, $lte: endOfMonth },
+    });
+
+    return res.json({
+      reply:
+        language === "ar"
+          ? `عدد الموظفين اللي انضموا هذا الشهر هو: ${newEmployees}`
+          : `Number of employees joined this month: ${newEmployees}`,
+    });
+  }
+
+  // عدد الموظفين
+  if (
+    (language === "ar" && msg.includes("عدد الموظفين")) ||
+    (language === "en" && msg.includes("how many employees"))
+  ) {
+    const totalEmployees = await Employee.countDocuments({ isDeleted: false });
+    const reply =
+      language === "ar"
+        ? `عدد الموظفين الحالي هو: ${totalEmployees}`
+        : `Current number of employees is: ${totalEmployees}`;
     return res.json({ reply });
   }
 
