@@ -178,6 +178,21 @@ export const updateEmployee = asyncHandler(async (req, res, next) => {
   if (!isValid) {
     return res.status(409).json({ error: message });
   }
+  const hireDate = new Date(req.body.hireDate);
+
+  // Validate hireDate
+  const firstAttendance = await Attendance.findOne({
+    employee: req.params.id,
+  }).sort({ date: 1 }); // earliest
+
+  if (firstAttendance && hireDate > firstAttendance.date) {
+    return next(
+      new AppError(
+        "Hire date cannot be after the employee's first attendance date.",
+        400
+      )
+    );
+  }
 
   const employee = await Employee.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
